@@ -89,15 +89,6 @@ def Gradient(Elevation):
         - Y_unitY
     '''
     
-    #Delta_x = TransformMatrix.a  # X pixel size
-    #Delta_y = abs(TransformMatrix.e)  # Y pixel size (absolute value bdue to negativity)
-    
-    #Delta_x = np.median(np.diff(X))  # Mean distance between consecutive points in the x direction (in meters)
-    #Delta_y = np.median(np.diff(Y))  # Mean distance between consecutive points in the y direction (in meters)
-    
-    #print('Delta_x: ' + str(Delta_x))
-    #print('Delta_y: ' + str(Delta_y))
-
     # Finding Elevation Gradients #
     dz_dx, dz_dy = np.gradient(Elevation) # gradient of the elvation matrix
 
@@ -113,7 +104,7 @@ def Gradient(Elevation):
 ### END Gradient
 
 
-def DataRetrieve(bin_factor):
+def DataRetrieve(BinMode, BinFactor):
     '''
     Description:
         
@@ -175,143 +166,70 @@ def DataRetrieve(bin_factor):
     # Band 1 (Elevation)
     Elevation = File.read(1) # reads band 1
     
-    ''' binning --> works''' '''
-    #trying out the binning on the elevation:
-    Indeces_X = np.arange(0, File.width, bin_factor-1)
-    Indeces_Y = np.arange(0, File.height, bin_factor-1)
+    if BinMode == 'Sampling': # Samples every BinFactor points in both x and y
+        Indeces_X = np.arange(0, File.width, (BinFactor - 1)) # List of Sample Points
+        Indeces_Y = np.arange(0, File.height, (BinFactor - 1)) # List of Sample Points
         
-    Elevation_Binned = []
+        # Initializing Binned List #
+        Elevation_Binned = []
     
-    for index_y in range(0, len(Elevation)): # iterating through each row
-        if index_y in Indeces_Y: # if row index is within binned indeces 
-            e_row = []
-            for index_x in range(0, len(Elevation[index_y])): # iterating through column
-                if index_x in Indeces_X:
-                    e_row.append(Elevation[index_y][index_x])                    #print(Elevation[index_y - (bin_factor - 1) : index_y + (bin_factor - 1)][index_x - (bin_factor - 1) : index_x + (bin_factor - 1)])
-            Elevation_Binned.append(e_row)
+        # Iterating through Elevation Data and Binning #
+        for index_y in range(0, len(Elevation)): # Iterating through each row of data 
+            if index_y in Indeces_Y: # If row index is within binned indeces 
+                Bin_row = [] # initializing binned row variable
+                for index_x in range(0, len(Elevation[index_y])): # iterating through column of data
+                    if index_x in Indeces_X: # If column is within binned indeces
+                        Bin_row.append(Elevation[index_y][index_x]) # Saving Binned point
+                Elevation_Binned.append(Bin_row) # appending to binned elevation list
+        ###
+        Elevation_Binned = np.array(Elevation_Binned) # Initializing object as numpy array
+        Z = Elevation_Binned
     ###
     
-    Elevation_Binned = np.array(Elevation_Binned)
+    ##### ----- #####
     
-    Elevation = Elevation_Binned
-    
-    
-    print(Elevation_Binned)
+    if BinMode == 'Median': # Takes a median of every square (side length = BinFactor) set of points
+        Indeces_X = np.arange(0, File.width, (BinFactor - 1)) # List of Center Points
+        Indeces_Y = np.arange(0, File.height, (BinFactor - 1)) # List of Center Points
             
-                
+        # Initializing Binned List #
+        Elevation_Binned = []
         
-        
-    ''' ''' '''
+        for index_y in range(0, len(Elevation)): # Iterating through each row of data
+            if index_y in Indeces_Y: # If row index is within binned indeces 
+                Bin_row = [] # initializing binned row variable
+                for index_x in range(0, len(Elevation[index_y])): # Iterating through column of data
+                    if index_x in Indeces_X: # If column is within binned indeces
+                        MedianPoints = [] # initializing median points list (points that will need to be passed in for median combining)
+                        for row in Elevation[index_y - (BinFactor - 1): index_y + (BinFactor + 1)]: # iterating through each row of binned column segment
+                            MedianPoints.append(row[index_x - (BinFactor - 1) : index_x + (BinFactor + 1)]) # points to be considered from each row for median combining
+                            
+                        Bin_row.append(np.median(MedianPoints)) # Saving binned point
+                Elevation_Binned.append(Bin_row) # appending to binned elevation list
+        ###
     
-    ''' Binning --> median '''
-    
-    Indeces_X = np.arange(0, File.width, bin_factor-1)
-    Indeces_Y = np.arange(0, File.height, bin_factor-1)
-        
-    Elevation_Binned = []
-    
-    for index_y in range(0, len(Elevation)): # iterating through each row
-        if index_y in Indeces_Y: # if row index is within binned indeces 
-            e_row = []
-            for index_x in range(0, len(Elevation[index_y])): # iterating through column
-                if index_x in Indeces_X:
-                    # median filter:
-                    MedianPoints = []
-                    for row in Elevation[index_y - (bin_factor - 1): index_y + (bin_factor + 1)]: # iterating through each row of binned segment
-                        MedianPoints.append(row[index_x - (bin_factor - 1) : index_x + (bin_factor + 1)]) # points to be considered from each row
-                        
-                    
-                    e_row.append(np.median(MedianPoints))
-            Elevation_Binned.append(e_row)
+        Elevation_Binned = np.array(Elevation_Binned) # initilaizing object as numpy array
+        Z = Elevation_Binned
     ###
     
-    Elevation_Binned = np.array(Elevation_Binned)
-    
-    Elevation = Elevation_Binned
-    
-    
-    # Fixing nanas up early and seeing what happens
-    Z = Elevation
-    
-    # fixing NANs
+    # Updating all NAN points to zero (adjustments for nonsense data carried through calculations)
     Z[np.where(np.isnan(Z))] = 0
     
+    # Acquiring row and column values where data is defined
+    Rows, Columns = np.where(Z != 0)
     
-    #print(Elevation_Binned)
-    
-    
-    ''' '''
-    
-
-
+    # Image Correction #
+    #Z = Z[1:, 1:] # eliminate top tow and leftmost row, nonsense data
     
     
     
-    #Rows, Columns = np.where(Elevation != NAN) # acquiring values where elvation is defined
-    Rows, Columns = np.where(Elevation != 0)
-    Z = Z[1:, 1:] # eliminate top tow and leftmost row, nonsense data
     
-    #print('Rows:')
-    #print(Rows)
-    
-    #Rows = Rows.reshape(-1, File.width)  # formatting in 2D square grid
-    #Columns = Columns.reshape(File.height, -1) # formatting into 2d square grid
-    
-    '''
-    Rows:
-    [    0     0     0 ... 10811 10811 10811] # value of each row correpsonding to each point
-
-    Cols:
-    [    0     1     2 ... 10809 10810 10811] # value of each column corresponding to each point
-    
-    
-    '''
-    
-    
-    
-
     
     Lons, Lats = rasterio.transform.xy(TransformMatrix, Rows, Columns) # Converts each point into a longitude and latitiude measurement
-    #Z = Elevation[Rows, Columns] # list of Z values (in meters)
-    
-    print('lons')
-    print(Lons)
-    
-    print('Lats')
-    print(Lats)
-    
-    
-    '''  
-    Z = Elevation
-    
-    # fixing NANs
-    Z[np.where(np.isnan(Z))] = 0
-    
-    print()
-    print()
-    
-    
-    '''
-    
     
     
     X, Y, EPSG_UTM = LonLat_to_XY(Lons, Lats, CRS) # cartesian x and y values associated with each point
     
-    print()
-    print('X:')
-    print(X)
-    print('Y:')
-    print(Y)
-    print('Z:')
-    print(Z)
-    print()
-    print(np.shape(X))
-    print(np.shape(Y))
-    print(np.shape(Z))
-    print()
-    
-    #X = X.reshape(-1, File.width)  # formatting in 2D square grid
-    #Y = Y.reshape(File.height, -1) # formatting into 2d square grid
     
     # Band 2 (Slope)
     if Bands >= 2:
@@ -319,7 +237,7 @@ def DataRetrieve(bin_factor):
         Slope = np.tan(np.radians(SlopeAngle)) # Converts slope to fraction
     
     else: # Band 2 data unavailable
-        Slope, X_unitV, Y_unitV = Gradient(X, Y, Elevation, TransformMatrix)
+        Slope, X_unitV, Y_unitV = Gradient(Elevation)
         Slope = Slope[Rows, Columns] # Determining Slope at pixels with data
     ###
     
@@ -327,8 +245,8 @@ def DataRetrieve(bin_factor):
     if Bands >= 3:
         AspectAngle = File.read(3)[Rows, Columns] # reads band 3 (direction measured in degrees)
         ''' Aspect is measured in 0 to 360 degrees (0 = North, 90 = East, 180 = South, 270 = West) '''
-        X_unitV = -np.cos(np.radians(AspectAngle))
-        Y_unitV = -np.sin(np.radians(AspectAngle))
+        X_unitV = -np.cos(np.radians(AspectAngle)) # Converting to East (x-direction) unit vector
+        Y_unitV = -np.sin(np.radians(AspectAngle)) # Converting to North (y-direction) unit vector
     
     else: # Band 3 data unavailable
         X_unitV = X_unitV[Rows, Columns]
@@ -357,17 +275,20 @@ def OutputTXT(X, Y, Z, Slope, X_unitV, Y_unitV, OutputFileName):
     '''
     
     File = open(OutputFileName, 'w')
+    # Wiring Python Readable Header #
+    #File.write('# X-Position (m) | Y-Position (m) | Z-Position (m) | Fractional Slope | Slope Unit Vector (X) | Slope Unit Vector (Y) #')
     
-    for index in range(0, len(X)):
+    for index in range(0, len(X)): # Iterating through each point and writing data to file
         File.write((f"{X[index]:.5f}, {Y[index]:.5f}, {Z[index]:.5f}, {Slope[index]:.5f}, {X_unitV[index]:.5f}, {Y_unitV[index]:.5f} \n"))
         
     File.close()
 ### END OutputTXT
     
     
-X, Y, Z, Slope, X_unitV, Y_unitV = DataRetrieve(40)
+X, Y, Z, Slope, X_unitV, Y_unitV = DataRetrieve('Median', 40)
 
-print('length X: ' + str(len(X)) + ' | Length Y: ' + str(len(Y)) + ' | Length Z: ' + str(len(Z)))
+print('length X: ' + str(len(X)) + ' | Length Y: ' + str(len(Y)) + ' | Length Z: ' + str(len(Z) * len(Z[0])))
+print(f'length Slope: {len(Slope)} | length X_unitV: {len(X_unitV)} | length Y_unitV: {len(Y_unitV)}')
 
 print('Data Retrieved... Writing to a file...')
 
@@ -384,10 +305,6 @@ print("Done!")
 
 
 
-
-
-# Quick display #
-
 # Visualize the Elevation Map (Terrain)
 plt.figure(figsize=(10, 8))  
 plt.imshow(Z, cmap='terrain', interpolation='nearest')  
@@ -395,8 +312,7 @@ plt.colorbar(label='Elevation (m)')
 plt.title('Elevation Map (Terrain)')  
 plt.xlabel('X (UTM)')
 plt.ylabel('Y (UTM)')
-plt.show()  
-
+plt.show() 
 
 
 
