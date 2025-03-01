@@ -386,76 +386,20 @@ print("Done!")
 
 
 
-
-
-# # Reshape the X, Y, Z data to 2D arrays (matrices) based on the number of rows and columns.
-# # Assuming you have some information on the grid size (rows, columns)
-
-# # Determine the grid size (this might need to be adjusted depending on how your data is organized)
-# rows = int(np.sqrt(len(X)))  # Assuming it's a square grid for simplicity
-# cols = rows  # Assuming square grid (adjust this if necessary)
-
-# # Reshape the X, Y, and Z lists into 2D arrays (matrices)
-# X_grid = np.reshape(X, (rows, cols))
-# Y_grid = np.reshape(Y, (rows, cols))
-# Z_grid = np.reshape(Z, (rows, cols))
+# Quick display #
 
 # Visualize the Elevation Map (Terrain)
-plt.figure(figsize=(10, 8))  # Optional: Set the size of the plot
-plt.imshow(Z, cmap='terrain', interpolation='nearest')  # Display the Z values as a terrain map
-plt.colorbar(label='Elevation (m)')  # Add color bar with elevation label
-plt.title('Elevation Map (Terrain)')  # Set the title
+plt.figure(figsize=(10, 8))  
+plt.imshow(Z, cmap='terrain', interpolation='nearest')  
+plt.colorbar(label='Elevation (m)')  
+plt.title('Elevation Map (Terrain)')  
 plt.xlabel('X (UTM)')
 plt.ylabel('Y (UTM)')
-plt.show()  # Show the plot
+plt.show()  
 
 
 
 
-    
-
-
-
-
-''' Ok so basically something is fucked up with the binning it seems to be only grabbing every 4th point but repeating???
-IDK look at the map and the data displayed, something weird is going on. Basically at the resolutio the raster map is right now
-it is really, really , really big!
-
-we basically need to find a way to bin the points correctly and make a lower resolution raster image, an option could be a 10 point median filter for example
-where the lists are passed through and every 10 points is joined into one point, to make things easier, and the height value associated with that median is used ( or we could take median of height too?)
-IDK 
-
-Ideally for the purpoe of my assignment I would like to have a 100 by 100 point grid to work with so that I can have a large enough data set, but any more and I fele it may overwhelm my alogrithm. 
-
-
-
-IDEA: try an np.arange(0, len(height/width), bin_factor) and just take the row and column as the row = row[every bin point] andsee what that does, 
-it should bin the height and width by the same amount, keeping the square image and if we do it early enough in the script the Z values will follow suit
-'''
-
-'''
-ideas:
-    - 
-    - the data likely has to be organized into a matrix / meshgrid in order to compute the gradient properly, one big list like how
-    it is now will give huge error at the endding x point
-    - print statements for the first few points for x, y, and z and the last few points for x, y, and z
-    - in theory binning each side of the matrix of points should work and retain the square shape, making everything valid, but we have to look more into how to display it
-    i think it has something to do with meshgribs
-    - would be worthwhile to make a plot of elevation and magnitude of gradient
-    - 
-'''
-
-''' BAND 1 is in form of:
-    [[318.82617 319.17004 319.43512 ... 395.98694 399.3295  402.49948]
-     [318.9304  319.2201  319.45926 ... 398.8077  401.8106  404.7819 ]
-     [319.0707  319.31808 319.52136 ... 401.49115 404.1982  406.88284]
-     ...
-     [401.7541  401.8675  401.90424 ... 271.66656 271.3468  270.79984]
-     [402.17694 402.28314 402.35858 ... 271.46365 270.87872 270.25723]
-     [402.13776 402.30658 402.4861  ... 271.37204 270.71704 270.06305]]
-    
-    each entry is a row of elevation points 
-'''
 
 
 
