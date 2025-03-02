@@ -337,7 +337,10 @@ def MAIN():
     Location = 'Pittsburgh' # string, name of location being displayed (nearest city / landmark)
     ############### ----------- ###############
 
-    
+    # Quick correction if you forget to adjust BinFactor #
+    if BinMode == 'None': 
+        BinFactor = 1
+
     X, Y, Z, Slope, X_unitV, Y_unitV = DataRetrieve(BinMode, BinFactor)
 
     # testing #
