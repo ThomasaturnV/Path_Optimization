@@ -2,8 +2,9 @@
 '''
 Author: Thomas Joyce
 
-Class: MATH 496T - Mathematics of Generative AI 
+Version: 1.0
 
+Class: MATH 496T - Mathematics of Generative AI 
 
 Description: Program derives the x, y, z values of a given terrain map taken from the 
 USGS publically available data set. See "DataAquisition" for information on how to acquire a USGS GeoTiff file. 
@@ -45,17 +46,17 @@ from pyproj import Transformer
 ### ----- # Functions # ----- ###
 def LonLat_to_XY(Longitudes, Latitudes, CRS):
     '''
-    Description:
+    Description: Converts the longitudes and latitudes of the raw Geotiff data intoa projected cartesian axis of X (east)
+    and Y (north)
     
     Inputs: 
-        - Longitudes: 
-        - Latitudes:
-        - CRS:
-    
+        - Longitudes: list of floats, list of longitude float points obtained from the Geotiff file (raw data) to be converted
+        - Latitudes: list of floats, list of latitudes float points obtained from the Geotiff file (raw data) to be converted
+        - CRS: string, coordinate reference system (geographic or projected), often comes in the form of an EPSG code    
     Returns:
-        - X:
-        - Y:
-        - EPSG_UTM:
+        - X: list of floats, range of x points as a 1-dimensional list
+        - Y: list of floats, range of y points as a 1-dimensional list
+        - EPSG_UTM: string, EPSG zone used for longitude identification. This code is needed to compute the spherical geometry
     '''
     
     
@@ -78,15 +79,16 @@ def LonLat_to_XY(Longitudes, Latitudes, CRS):
 
 def Gradient(Elevation):
     ''' 
-    Description:
+    Description: Computes the gradient (slope) of the cloud point data at each point and returns the magnitude and 
+    direction of the gradient at each defined point
         
     Inputs:
-        - Elevation
+        - Elevation: array (2 x 2) of floats, range of z points as a 2-dimensional array of square structure
     
     Returns:
-        - Slope:
-        - X_unitV
-        - Y_unitY
+        - Slope: list of floats, range of fractional slope values associated with each data point
+        - X_unitV: list of floats, range of x-directional unit vectors associated with the direction of slope at each point
+        - Y_unitV: list of floats, range of y-directional unit vectors associated with the direction of slope at each point
     '''
     
     # Finding Elevation Gradients #
@@ -106,18 +108,22 @@ def Gradient(Elevation):
 
 def DataRetrieve(BinMode, BinFactor):
     '''
-    Description:
+    Description: Retrieves the data encoded in the raster image (Geotiff file) and returns the 
+    6 elements needed for documentation of the cloud point map (positions, slope, and slope direction)
         
     Inputs:
-        - 
+        - BinMode: string, variable description which bin mode is used when compressing the data
+            'Sampling' takes every BinFactor point and discards the rest
+            'Median' takes the median over a grid of side length BinFactor and saves the point as a median of the local terrain
+        - BinFactor: interger, value describing the number of pixels (data points) in each bin
     
     Returns:
-        - X:
-        - Y:
-        - Z:
-        - Slope:
-        - X_unitV:
-        - Y_unitV:
+        - X: list of floats, range of x points as a 1-dimensional list
+        - Y: list of floats, range of y points as a 1-dimensional list
+        - Z: array (2 x 2) of floats, range of z points as a 2-dimensional array of square structure
+        - Slope: list of floats, range of fractional slope values associated with each data point
+        - X_unitV: list of floats, range of x-directional unit vectors associated with the direction of slope at each point
+        - Y_unitV: list of floats, range of y-directional unit vectors associated with the direction of slope at each point
         '''
     
     ### File Selecttion ###
@@ -210,6 +216,11 @@ def DataRetrieve(BinMode, BinFactor):
     
         Elevation_Binned = np.array(Elevation_Binned) # initilaizing object as numpy array
         Z = Elevation_Binned
+        
+    ##### ----- #####
+    
+    else:
+        Z = Elevation
     ###
     
     # Updating all NAN points to zero (adjustments for nonsense data carried through calculations)
@@ -219,15 +230,10 @@ def DataRetrieve(BinMode, BinFactor):
     Rows, Columns = np.where(Z != 0)
     
     # Image Correction #
-    #Z = Z[1:, 1:] # eliminate top tow and leftmost row, nonsense data
+    Z = Z[1:, 1:] # eliminate top tow and leftmost row, nonsense data
     
-    
-    
-    
-    
+    # Longitude, Latitiude to X,Y (meters) Conversion #
     Lons, Lats = rasterio.transform.xy(TransformMatrix, Rows, Columns) # Converts each point into a longitude and latitiude measurement
-    
-    
     X, Y, EPSG_UTM = LonLat_to_XY(Lons, Lats, CRS) # cartesian x and y values associated with each point
     
     
@@ -259,24 +265,22 @@ def DataRetrieve(BinMode, BinFactor):
     
 def OutputTXT(X, Y, Z, Slope, X_unitV, Y_unitV, OutputFileName):
     '''
-    Description:
+    Description: Saves the converted Geotiff data to a txt file for easier reading and manipulation from other
+    programs
     
     Inputs:
-        - X: 
-        - Y:
-        - Z:
-        - Slope:
-        - X_unitV:
-        - Y_unitV:
-        - OutputFileName:
-    
-    Returns:
-        - 
+        - X: list of floats, range of x points as a 1-dimensional list
+        - Y: list of floats, range of y points as a 1-dimensional list
+        - Z: array (2 x 2) of floats, range of z points as a 2-dimensional array of square structure
+        - Slope: list of floats, range of fractional slope values associated with each data point
+        - X_unitV: list of floats, range of x-directional unit vectors associated with the direction of slope at each point
+        - Y_unitV: list of floats, range of y-directional unit vectors associated with the direction of slope at each point
+        - OutputFileName: string ending in .txt, filename for data to be saved under as a txt
     '''
     
     File = open(OutputFileName, 'w')
     # Wiring Python Readable Header #
-    #File.write('# X-Position (m) | Y-Position (m) | Z-Position (m) | Fractional Slope | Slope Unit Vector (X) | Slope Unit Vector (Y) #')
+    File.write('# X-Position (m) | Y-Position (m) | Z-Position (m) | Fractional Slope | Slope Unit Vector (X) | Slope Unit Vector (Y) #')
     
     for index in range(0, len(X)): # Iterating through each point and writing data to file
         File.write((f"{X[index]:.5f}, {Y[index]:.5f}, {Z[index]:.5f}, {Slope[index]:.5f}, {X_unitV[index]:.5f}, {Y_unitV[index]:.5f} \n"))
@@ -284,38 +288,73 @@ def OutputTXT(X, Y, Z, Slope, X_unitV, Y_unitV, OutputFileName):
     File.close()
 ### END OutputTXT
     
+
+def PlotElevation(Z, BinMode, BinFactor, Location):
+    ''' 
+    Description: Plots and saves a figure of the elevation of a given location for easier visualization
     
-X, Y, Z, Slope, X_unitV, Y_unitV = DataRetrieve('Median', 40)
-
-print('length X: ' + str(len(X)) + ' | Length Y: ' + str(len(Y)) + ' | Length Z: ' + str(len(Z) * len(Z[0])))
-print(f'length Slope: {len(Slope)} | length X_unitV: {len(X_unitV)} | length Y_unitV: {len(Y_unitV)}')
-
-print('Data Retrieved... Writing to a file...')
-
-OutputTXT(X, Y, Z.flatten(), Slope, X_unitV, Y_unitV, "Out.txt")
-
-print("Done!")
-
-
-
-
-
-
-
-
-
-
-# Visualize the Elevation Map (Terrain)
-plt.figure(figsize=(10, 8))  
-plt.imshow(Z, cmap='terrain', interpolation='nearest')  
-plt.colorbar(label='Elevation (m)')  
-plt.title('Elevation Map (Terrain)')  
-plt.xlabel('X (UTM)')
-plt.ylabel('Y (UTM)')
-plt.show() 
+    Inputs:
+        - Z: array (2 x 2) of floats, range of z points as a 2-dimensional array of square structure
+        - BinMode: string, variable description which bin mode is used when compressing the data, see DataRetrieve for more details
+        - BinFactor: interger, value describing the number of pixels (data points) in each bin
+        - Location: string, name of location being displayed (nearest city / landmark)
+    '''
+    
+    # Figure #
+    plt.figure(figsize=(8, 8))
+    
+    # Plotting #
+    plt.imshow(Z, cmap='terrain', interpolation='nearest')  
+    
+    # Plot Formatting #
+    plt.colorbar(label='Elevation (m)')  
+    
+    plt.title(f'Elevation Map of {Location}')  
+    plt.xlabel('X-Position (m)')
+    plt.ylabel('Y-Position (m)')
+    
+    plt.tight_layout()
+    
+    # Saving Figure #
+    plt.savefig(f'Elevation-{Location}_Bin{BinFactor}-{BinMode}.png')
+### END PlotElevation
 
 
 
 
+### ----- # Main Function # ----- ###
+def MAIN():
+    '''
+    Description: Executes the program by retrieving the Geotiff data and formatting it correctly for an
+    output txt file. PLEASE FILL OUT USER INPUTS HERE!
+    '''
+    
+    ############### User Inputs ###############
+    BinFactor = 1 # interger, value describing the number of pixels (data points) in each bin
+    BinMode = 'None' # string, variable description which bin mode is used when compressing the data, see DataRetrieve for more details
+    OutputFileName = 'Out.txt' # string ending in .txt, filename for data to be saved under as a txt
+    Location = 'Mt.Rainer' # string, name of location being displayed (nearest city / landmark)
+    ############### ----------- ###############
+
+    
+    X, Y, Z, Slope, X_unitV, Y_unitV = DataRetrieve(BinMode, BinFactor)
+
+    # testing #
+    #print('length X: ' + str(len(X)) + ' | Length Y: ' + str(len(Y)) + ' | Length Z: ' + str(len(Z) * len(Z[0])))
+    #print(f'length Slope: {len(Slope)} | length X_unitV: {len(X_unitV)} | length Y_unitV: {len(Y_unitV)}')
+
+    #print('Data Retrieved... Writing to a file...')
+
+    #OutputTXT(X, Y, Z.flatten(), Slope, X_unitV, Y_unitV, OutputFileName)
+    
+    PlotElevation(Z, BinMode, BinFactor, Location)
+    
+    
+
+    #print("Done!")
+    
+### END MAIN
 
 
+### ----- # Execution # ----- ###
+MAIN()
