@@ -2,7 +2,7 @@
 '''
 Author: Thomas Joyce
 
-Version: 1.0
+Version: 0.9 - working, not cleaned up
 
 Class: MATH 496T - Mathematics of Generative AI 
 
@@ -194,7 +194,7 @@ def DataRetrieve(BinMode, BinFactor):
     
     ##### ----- #####
     
-    if BinMode == 'Median': # Takes a median of every square (side length = BinFactor) set of points
+    elif BinMode == 'Median': # Takes a median of every square (side length = BinFactor) set of points
         Indeces_X = np.arange(0, File.width, (BinFactor - 1)) # List of Center Points
         Indeces_Y = np.arange(0, File.height, (BinFactor - 1)) # List of Center Points
             
