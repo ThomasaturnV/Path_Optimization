@@ -263,7 +263,7 @@ def DataRetrieve(BinMode, BinFactor):
 ### END DataRetrieve
     
     
-def OutputTXT(X, Y, Z, Slope, X_unitV, Y_unitV, OutputFileName):
+def OutputTXT(X, Y, Z, Slope, X_unitV, Y_unitV, Location, BinFactor, BinMode):
     '''
     Description: Saves the converted Geotiff data to a txt file for easier reading and manipulation from other
     programs
@@ -275,10 +275,12 @@ def OutputTXT(X, Y, Z, Slope, X_unitV, Y_unitV, OutputFileName):
         - Slope: list of floats, range of fractional slope values associated with each data point
         - X_unitV: list of floats, range of x-directional unit vectors associated with the direction of slope at each point
         - Y_unitV: list of floats, range of y-directional unit vectors associated with the direction of slope at each point
-        - OutputFileName: string ending in .txt, filename for data to be saved under as a txt
+        - Location: string, name of location being displayed (nearest city / landmark)
+        - BinFactor: interger, value describing the number of pixels (data points) in each bin
+        - BinMode: string, variable description which bin mode is used when compressing the data, see DataRetrieve for more details
     '''
     
-    File = open(OutputFileName, 'w')
+    File = open(f'Elevation-{Location}_Bin{BinFactor}-{BinMode}.txt', 'w')
     # Wiring Python Readable Header #
     File.write('# X-Position (m) | Y-Position (m) | Z-Position (m) | Fractional Slope | Slope Unit Vector (X) | Slope Unit Vector (Y) #')
     
@@ -332,8 +334,7 @@ def MAIN():
     ############### User Inputs ###############
     BinFactor = 1 # interger, value describing the number of pixels (data points) in each bin
     BinMode = 'None' # string, variable description which bin mode is used when compressing the data, see DataRetrieve for more details
-    OutputFileName = 'Out.txt' # string ending in .txt, filename for data to be saved under as a txt
-    Location = 'Mt.Rainer' # string, name of location being displayed (nearest city / landmark)
+    Location = 'Pittsburgh' # string, name of location being displayed (nearest city / landmark)
     ############### ----------- ###############
 
     
@@ -345,7 +346,7 @@ def MAIN():
 
     #print('Data Retrieved... Writing to a file...')
 
-    #OutputTXT(X, Y, Z.flatten(), Slope, X_unitV, Y_unitV, OutputFileName)
+    #OutputTXT(X, Y, Z.flatten(), Slope, X_unitV, Y_unitV, Location, BinFactor, BinMode)
     
     PlotElevation(Z, BinMode, BinFactor, Location)
     
