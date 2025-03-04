@@ -2,7 +2,7 @@
 '''
 Author: Thomas Joyce
 
-Version: 0.9 - working, not cleaned up
+Version: 1.01
 
 Class: MATH 496T - Mathematics of Generative AI 
 
@@ -226,11 +226,11 @@ def DataRetrieve(BinMode, BinFactor):
     # Updating all NAN points to zero (adjustments for nonsense data carried through calculations)
     Z[np.where(np.isnan(Z))] = 0
     
-    # Acquiring row and column values where data is defined
-    Rows, Columns = np.where(Z != 0)
-    
     # Image Correction #
     Z = Z[1:, 1:] # eliminate top tow and leftmost row, nonsense data
+    
+    # Acquiring row and column values where data is defined
+    Rows, Columns = np.where(Z != 0)
     
     # Longitude, Latitiude to X,Y (meters) Conversion #
     Lons, Lats = rasterio.transform.xy(TransformMatrix, Rows, Columns) # Converts each point into a longitude and latitiude measurement
@@ -263,7 +263,7 @@ def DataRetrieve(BinMode, BinFactor):
 ### END DataRetrieve
     
     
-def OutputTXT(X, Y, Z, Slope, X_unitV, Y_unitV, Location, BinFactor, BinMode):
+def OutputFile(X, Y, Z, Slope, X_unitV, Y_unitV, Location, BinFactor, BinMode, OutputMode):
     '''
     Description: Saves the converted Geotiff data to a txt file for easier reading and manipulation from other
     programs
@@ -278,14 +278,31 @@ def OutputTXT(X, Y, Z, Slope, X_unitV, Y_unitV, Location, BinFactor, BinMode):
         - Location: string, name of location being displayed (nearest city / landmark)
         - BinFactor: interger, value describing the number of pixels (data points) in each bin
         - BinMode: string, variable description which bin mode is used when compressing the data, see DataRetrieve for more details
+        - OutputMode: string, name of ouput mode being considered for the output file
+            'OptimalControl' places a metadata header at the beginning of the file along with column designators. The data takes the form:
+                ex) X-Position (m) | Y-Position (m) | Z-Position (m) | Fractional Slope | Slope Unit Vector (X) | Slope Unit Vector (Y)
+            '3DPrint' takes the augmented x,y,z values into an ASCII file for importation into meshlab
+                ex) X-Position (m) | Y-Position (m) | Z-Position (m)
     '''
     
-    File = open(f'Elevation-{Location}_Bin{BinFactor}-{BinMode}.txt', 'w')
-    # Wiring Python Readable Header #
-    File.write('# X-Position (m) | Y-Position (m) | Z-Position (m) | Fractional Slope | Slope Unit Vector (X) | Slope Unit Vector (Y) #')
+    if OutputMode == 'OptimalControl':
+        File = open(f'{OutputMode}Elevation-{Location}_Bin{BinFactor}-{BinMode}.txt', 'w')
+        # Wiring Python Readable Header #
+        File.write('# X-Position (m) | Y-Position (m) | Z-Position (m) | Fractional Slope | Slope Unit Vector (X) | Slope Unit Vector (Y) #')
     
-    for index in range(0, len(X)): # Iterating through each point and writing data to file
-        File.write((f"{X[index]:.5f}, {Y[index]:.5f}, {Z[index]:.5f}, {Slope[index]:.5f}, {X_unitV[index]:.5f}, {Y_unitV[index]:.5f} \n"))
+        for index in range(0, len(X)): # Iterating through each point and writing data to file
+            File.write((f"{X[index]:.5f}, {Y[index]:.5f}, {Z[index]:.5f}, {Slope[index]:.5f}, {X_unitV[index]:.5f}, {Y_unitV[index]:.5f} \n")) # 5 decimal float values
+        ###
+    ###
+    
+    if OutputMode == '3DPrint':
+        File = open(f'{OutputMode}Elevation-{Location}_Bin{BinFactor}-{BinMode}.asc', 'w')
+        
+        for index in range(0, len(X)): # Iterating through each point and writing data to file
+            File.write((f"{X[index]:.5f}, {Y[index]:.5f}, {Z[index]:.5f} \n")) # 5 decimal float values
+        ###
+    ###
+            
         
     File.close()
 ### END OutputTXT
@@ -332,9 +349,10 @@ def MAIN():
     '''
     
     ############### User Inputs ###############
-    BinFactor = 1 # interger, value describing the number of pixels (data points) in each bin
-    BinMode = 'None' # string, variable description which bin mode is used when compressing the data, see DataRetrieve for more details
+    BinFactor = 10 # interger, value describing the number of pixels (data points) in each bin
+    BinMode = 'Sampling' # string, variable description which bin mode is used when compressing the data, see DataRetrieve for more details
     Location = 'Pittsburgh' # string, name of location being displayed (nearest city / landmark)
+    OutputMode = '3DPrint' # string, name of ouput mode being considered for the output file (see OutputFile for more details)
     ############### ----------- ###############
 
     # Quick correction if you forget to adjust BinFactor #
@@ -349,7 +367,7 @@ def MAIN():
 
     #print('Data Retrieved... Writing to a file...')
 
-    #OutputTXT(X, Y, Z.flatten(), Slope, X_unitV, Y_unitV, Location, BinFactor, BinMode)
+    OutputFile(X, Y, Z.flatten(), Slope, X_unitV, Y_unitV, Location, BinFactor, BinMode, OutputMode)
     
     PlotElevation(Z, BinMode, BinFactor, Location)
     
@@ -362,3 +380,5 @@ def MAIN():
 
 ### ----- # Execution # ----- ###
 MAIN()
+#if __name__ == '__MAIN__':
+#    MAIN()
