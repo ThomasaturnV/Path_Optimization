@@ -177,7 +177,7 @@ def DataRetrieve(BinMode, BinFactor):
         Indeces_Y = np.arange(0, File.height, (BinFactor - 1)) # List of Sample Points
         
         # Initializing Binned List #
-        Elevation_Binned = []
+        Elevation_Binned = [] # going to be an array soon
     
         # Iterating through Elevation Data and Binning #
         for index_y in range(0, len(Elevation)): # Iterating through each row of data 
@@ -288,7 +288,7 @@ def OutputFile(X, Y, Z, Slope, X_unitV, Y_unitV, Location, BinFactor, BinMode, O
     if OutputMode == 'OptimalControl':
         File = open(f'{OutputMode}Elevation-{Location}_Bin{BinFactor}-{BinMode}.txt', 'w')
         # Wiring Python Readable Header #
-        File.write('# X-Position (m) | Y-Position (m) | Z-Position (m) | Fractional Slope | Slope Unit Vector (X) | Slope Unit Vector (Y) #')
+        File.write('# X-Position (m) , Y-Position (m) , Z-Position (m) , Fractional Slope , Slope Unit Vector (X) , Slope Unit Vector (Y) #')
     
         for index in range(0, len(X)): # Iterating through each point and writing data to file
             File.write((f"{X[index]:.5f}, {Y[index]:.5f}, {Z[index]:.5f}, {Slope[index]:.5f}, {X_unitV[index]:.5f}, {Y_unitV[index]:.5f} \n")) # 5 decimal float values
