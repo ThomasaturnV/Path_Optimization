@@ -339,6 +339,14 @@ def PlotElevation(Z, BinMode, BinFactor, Location):
 ### END PlotElevation
 
 
+''' I think I need a read metadata function. The metadata is basically in the format of a Json dictionary
+so this function would do the following:
+    --> take each key and value and put it on its own line adding a new line character (\n) after each
+    --> keep track of how many keys there are (in other words len(dictionary)
+    --> i can then return that so in output file it can read the metadata and build my header correctly for the classes
+'''
+
+
 
 
 ### ----- # Main Function # ----- ###
@@ -349,10 +357,10 @@ def MAIN():
     '''
     
     ############### User Inputs ###############
-    BinFactor = 10 # interger, value describing the number of pixels (data points) in each bin
+    BinFactor = 40 # interger, value describing the number of pixels (data points) in each bin
     BinMode = 'Sampling' # string, variable description which bin mode is used when compressing the data, see DataRetrieve for more details
     Location = 'Pittsburgh' # string, name of location being displayed (nearest city / landmark)
-    OutputMode = '3DPrint' # string, name of ouput mode being considered for the output file (see OutputFile for more details)
+    OutputMode = 'OptimalControl' # string, name of ouput mode being considered for the output file (see OutputFile for more details)
     ############### ----------- ###############
 
     # Quick correction if you forget to adjust BinFactor #
