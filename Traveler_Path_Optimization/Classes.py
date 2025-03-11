@@ -69,26 +69,30 @@ class Landscape:
         File = open(DataFileName, 'r')
         
         # First line encodes header length #
-        Hlen = File.readline().split(':')[1]
+        Hlen = int(File.readline().split(':')[1])
         
         # Reading Header #
-        ''' fill this out once I've updated it '''
+        Partition = File.readline() # = '---------- Geotiff Conversion ----------'
+        self.DataHeight = int(File.readline().split(':')[1])
+        self.DataWidth = int(File.readline().split(':')[1])
         
         # Closing File #
         File.close()
         
         # Retrieving Data #
-        Data = np.genfromtxt(DataFileName, dtype = None, names = True, skip_header = Hlen)
+        Data = np.genfromtxt(DataFileName, dtype = None, names = True, skip_header = (Hlen - 1))
         ### ----- ###
         
+        
         ### Data Management ###
-        # X-Position (m) , Y-Position (m) , Z-Position (m) , Fractional Slope , Slope Unit Vector (X) , Slope Unit Vector (Y) #
-        Xpos = Data['X-Position (m)']
-        Ypos = Data['Y-Position (m)']
-        Zpos = Data['Z-Position (m)']
-        Slope = Data['Fractional Slope']
-        XSlopeV = Data['Slope Unit Vector (X)']
-        YSlopeV = Data['Slope Unit Vector (Y)']
+        # XPosition, YPosition, ZPosition, FractionalSlope, XSlopeUnitVector, YSlopeUnitVector # 
+
+        Xpos = Data['XPosition']
+        Ypos = Data['YPosition']
+        Zpos = Data['ZPosition']
+        Slope = Data['FractionalSlope']
+        XSlopeV = Data['XSlopeUnitVector']
+        YSlopeV = Data['YSlopeUnitVector']
         
         # Reshaping Data #
         ''' reshape the data here from my header values '''
@@ -96,27 +100,14 @@ class Landscape:
         # Inializing Values #
         ''' self.Xpos = ... '''
         
-        ''' If I can do all this in one line, do it, amke it pythonic '''
+        ''' If I can do all this in one line, do it, make it pythonic '''
         
         ### ----- ###
         
         
-        ''' 
-        Notes:
-            - so I have to reformat my geotiff output to match this stuff
-                - first line is "Header Length: NUM"
-            - I would like to have the BINNED shape data in the header too
-            - my bin factor and bin mode settings
-            - Then maybe a delimiter # -------# type of thing
-            - original file metadata
-            
-            --> essentially I want a history of what happned through each process to track bugs and to keep a record!
-        '''
-        
-        
-        
     ### END __init__
         
+    
     def GradientContourDiagram(self):
         '''
         Description: I want this function to essentially take the gradient and plot a heat map of it and have the 
@@ -127,7 +118,6 @@ class Landscape:
             -
         '''
     ### END GradientContourDiagram
-    
 ### END Landscape
 
 
@@ -176,5 +166,24 @@ class Traveler:
 ### END Traveler
     
         
+    
+    
+    
+    
+# ### TESTING ###
+# ### File Selection ###
+# print('SelectData')
+# root = Tk()
+# Path = askopenfilename(title = "Select file", filetypes = (("txt files","*.txt"),("all files","*.*")))
+# FilePath = os.path.split(os.path.abspath(Path))[0] # saves file path as a string
+# FileName = os.path.split(os.path.abspath(Path))[1] # saves file name as a string
+# root.destroy()
+
+# os.chdir(FilePath) # navigates to directory file is stored within
+
+# Pittsburgh = Landscape(FileName)
+
+# print(Pittsburgh.DataHeight)
+# print(Pittsburgh.DataWidth)
         
     

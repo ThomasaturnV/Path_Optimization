@@ -284,28 +284,28 @@ def MakeHeader(Metadata, BinFactor, BinMode, Z_width, Z_height):
     
     # Determining Length of Dictionary #
     MetaLength = len(Metadata)
-    if 'transform' in Metadata:
-        MetaLength += 2 # to account for the extra rows of the transformation matrix
     
     # Adding each component of custom header #
-    Header += f'Header Length: {MetaLength + 8} \n' # +8 to account for custom header my additions
-    Header += '---------- Geotiff Conversion ---------- \n'
-    Header += f'Bin Height: {Z_height} \n'
-    Header += f'Bin Width: {Z_width} \n'
-    Header += f'Bin Mode Used: {BinMode} \n'
-    Header += f'Bin Factor Used: {BinFactor} \n'
-    Header += '---------- Original File Metadata ---------- \n'
+    Header += f'# Header Length: {MetaLength + 9} \n' # +8 to account for custom header my additions
+    Header += '# ---------- Geotiff Conversion ---------- # \n'
+    Header += f'# Bin Height: {Z_height} \n'
+    Header += f'# Bin Width: {Z_width} \n'
+    Header += f'# Bin Mode Used: {BinMode} \n'
+    Header += f'# Bin Factor Used: {BinFactor} \n'
+    Header += '# Units: X-Position = m , Y-Position = m , Z-Position = m , Fractional Slope = unitless, Slope Unit Vector = unitless , Slope Unit Vector = unitless \n'
+    Header += '# ---------- Original File Metadata ---------- # \n'
     
     # Building metadata header based upon dictionary entries #
     MetaHeader = ''
     
     for key, value in Metadata.items():
-        MetaHeaderLine = f'{key}:{value} \n'
-        MetaHeader += MetaHeaderLine
+        if key != 'transform': # excluding multiline transform matrix ( it is no longer needed after this step)
+            MetaHeaderLine = f'# {key}:{value} \n'
+            MetaHeader += MetaHeaderLine
         
     Header += MetaHeader
         
-    Header += '---------- END HEADER ---------- \n'
+    Header += '# ---------- END HEADER ---------- # \n'
     
     return Header
 ### END ReadMetaData
@@ -348,7 +348,7 @@ def OutputFile(X, Y, Z, Slope, X_unitV, Y_unitV, Location, BinFactor, BinMode, O
         File.write(Header)
         
         # Writing numpy readable title (for column names) #
-        File.write('# X-Position (m) , Y-Position (m) , Z-Position (m) , Fractional Slope , Slope Unit Vector (X) , Slope Unit Vector (Y) # \n')
+        File.write('# XPosition, YPosition, ZPosition, FractionalSlope, XSlopeUnitVector, YSlopeUnitVector # \n')
     
         for index in range(0, len(X)): # Iterating through each point and writing data to file
             File.write((f"{X[index]:.5f}, {Y[index]:.5f}, {Z[index]:.5f}, {Slope[index]:.5f}, {X_unitV[index]:.5f}, {Y_unitV[index]:.5f} \n")) # 5 decimal float values
