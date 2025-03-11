@@ -2,7 +2,7 @@
 '''
 Author: Thomas Joyce
 
-Version: 1.01
+Version: 1.05
 
 Class: MATH 496T - Mathematics of Generative AI 
 
@@ -126,7 +126,7 @@ def DataRetrieve(BinMode, BinFactor):
         - Y_unitV: list of floats, range of y-directional unit vectors associated with the direction of slope at each point
         '''
     
-    ### File Selecttion ###
+    ### File Selection ###
     print('SelectData')
     root = Tk()
     Path = askopenfilename(title = "Select file", filetypes = (("tif files","*.tif"),("all files","*.*")))
@@ -259,11 +259,60 @@ def DataRetrieve(BinMode, BinFactor):
         Y_unitV = Y_unitV[Rows, Columns]
     ###
 
-    return X, Y, Z, Slope, X_unitV, Y_unitV
+    return X, Y, Z, Slope, X_unitV, Y_unitV, File.meta
 ### END DataRetrieve
     
+
+def MakeHeader(Metadata, BinFactor, BinMode, Z_width, Z_height):
+    '''
+    Description: Intakes the original file meta data and custom header variables to write a master header string 
+    to be written to the file. 
     
-def OutputFile(X, Y, Z, Slope, X_unitV, Y_unitV, Location, BinFactor, BinMode, OutputMode):
+    Inputs:
+        - Metadata: dictionary, encoded JSON file metadata
+        - BinFactor: interger, value describing the number of pixels (data points) in each bin
+        - BinMode: string, variable description which bin mode is used when compressing the data, see DataRetrieve for more details
+        - Z_width: interger, width of the new binned elevation array
+        - Z_height: interger, height of the new binned elevation array
+    
+    Returns: 
+        - Header: string, large string to be writen as the custom header for the output file
+    '''
+    
+    # Initilaizing Output Variable #
+    Header = ''
+    
+    # Determining Length of Dictionary #
+    MetaLength = len(Metadata)
+    if 'transform' in Metadata:
+        MetaLength += 2 # to account for the extra rows of the transformation matrix
+    
+    # Adding each component of custom header #
+    Header += f'Header Length: {MetaLength + 8} \n' # +8 to account for custom header my additions
+    Header += '---------- Geotiff Conversion ---------- \n'
+    Header += f'Bin Height: {Z_height} \n'
+    Header += f'Bin Width: {Z_width} \n'
+    Header += f'Bin Mode Used: {BinMode} \n'
+    Header += f'Bin Factor Used: {BinFactor} \n'
+    Header += '---------- Original File Metadata ---------- \n'
+    
+    # Building metadata header based upon dictionary entries #
+    MetaHeader = ''
+    
+    for key, value in Metadata.items():
+        MetaHeaderLine = f'{key}:{value} \n'
+        MetaHeader += MetaHeaderLine
+        
+    Header += MetaHeader
+        
+    Header += '---------- END HEADER ---------- \n'
+    
+    return Header
+### END ReadMetaData
+
+
+    
+def OutputFile(X, Y, Z, Slope, X_unitV, Y_unitV, Location, BinFactor, BinMode, OutputMode, Metadata):
     '''
     Description: Saves the converted Geotiff data to a txt file for easier reading and manipulation from other
     programs
@@ -283,12 +332,23 @@ def OutputFile(X, Y, Z, Slope, X_unitV, Y_unitV, Location, BinFactor, BinMode, O
                 ex) X-Position (m) | Y-Position (m) | Z-Position (m) | Fractional Slope | Slope Unit Vector (X) | Slope Unit Vector (Y)
             '3DPrint' takes the augmented x,y,z values into an ASCII file for importation into meshlab
                 ex) X-Position (m) | Y-Position (m) | Z-Position (m)
+        - Metadata: dictionary, encoded JSON file metadata
     '''
+    
+    # Flattening Z array and determining shape #
+    Z_width, Z_height = np.shape(Z)
+    Z = Z.flatten()
+    
     
     if OutputMode == 'OptimalControl':
         File = open(f'{OutputMode}Elevation-{Location}_Bin{BinFactor}-{BinMode}.txt', 'w')
-        # Wiring Python Readable Header #
-        File.write('# X-Position (m) , Y-Position (m) , Z-Position (m) , Fractional Slope , Slope Unit Vector (X) , Slope Unit Vector (Y) #')
+        
+        # Writing Custom Header #
+        Header = MakeHeader(Metadata, BinFactor, BinMode, Z_width, Z_height)
+        File.write(Header)
+        
+        # Writing numpy readable title (for column names) #
+        File.write('# X-Position (m) , Y-Position (m) , Z-Position (m) , Fractional Slope , Slope Unit Vector (X) , Slope Unit Vector (Y) # \n')
     
         for index in range(0, len(X)): # Iterating through each point and writing data to file
             File.write((f"{X[index]:.5f}, {Y[index]:.5f}, {Z[index]:.5f}, {Slope[index]:.5f}, {X_unitV[index]:.5f}, {Y_unitV[index]:.5f} \n")) # 5 decimal float values
@@ -339,14 +399,6 @@ def PlotElevation(Z, BinMode, BinFactor, Location):
 ### END PlotElevation
 
 
-''' I think I need a read metadata function. The metadata is basically in the format of a Json dictionary
-so this function would do the following:
-    --> take each key and value and put it on its own line adding a new line character (\n) after each
-    --> keep track of how many keys there are (in other words len(dictionary)
-    --> i can then return that so in output file it can read the metadata and build my header correctly for the classes
-'''
-
-
 
 
 ### ----- # Main Function # ----- ###
@@ -367,7 +419,7 @@ def MAIN():
     if BinMode == 'None': 
         BinFactor = 1
 
-    X, Y, Z, Slope, X_unitV, Y_unitV = DataRetrieve(BinMode, BinFactor)
+    X, Y, Z, Slope, X_unitV, Y_unitV, Metadata = DataRetrieve(BinMode, BinFactor)
 
     # testing #
     #print('length X: ' + str(len(X)) + ' | Length Y: ' + str(len(Y)) + ' | Length Z: ' + str(len(Z) * len(Z[0])))
@@ -375,7 +427,7 @@ def MAIN():
 
     #print('Data Retrieved... Writing to a file...')
 
-    OutputFile(X, Y, Z.flatten(), Slope, X_unitV, Y_unitV, Location, BinFactor, BinMode, OutputMode)
+    OutputFile(X, Y, Z, Slope, X_unitV, Y_unitV, Location, BinFactor, BinMode, OutputMode, Metadata)
     
     PlotElevation(Z, BinMode, BinFactor, Location)
     
