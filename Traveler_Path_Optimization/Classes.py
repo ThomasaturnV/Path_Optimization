@@ -62,7 +62,6 @@ class Landscape:
             
         Inputs:
             - DataFileName: 
-            -  
         '''
         ### File Management ###
         # Opening File #
@@ -80,30 +79,21 @@ class Landscape:
         File.close()
         
         # Retrieving Data #
-        Data = np.genfromtxt(DataFileName, dtype = None, names = True, skip_header = (Hlen - 1))
+        Data = np.genfromtxt(DataFileName, dtype = float, names = True, delimiter = ',', skip_header = (Hlen - 1))
         ### ----- ###
         
         
         ### Data Management ###
         # XPosition, YPosition, ZPosition, FractionalSlope, XSlopeUnitVector, YSlopeUnitVector # 
-
-        Xpos = Data['XPosition']
-        Ypos = Data['YPosition']
-        Zpos = Data['ZPosition']
-        Slope = Data['FractionalSlope']
-        XSlopeV = Data['XSlopeUnitVector']
-        YSlopeV = Data['YSlopeUnitVector']
         
-        # Reshaping Data #
-        ''' reshape the data here from my header values '''
-        
-        # Inializing Values #
-        ''' self.Xpos = ... '''
-        
-        ''' If I can do all this in one line, do it, make it pythonic '''
-        
+        # Reshaping and saving data to class #
+        self.XPositions = np.reshape(Data['XPosition'], (self.DataHeight, self.DataWidth))
+        self.YPositions = np.reshape(Data['YPosition'], (self.DataHeight, self.DataWidth))
+        self.ZPositions = np.reshape(Data['ZPosition'], (self.DataHeight, self.DataWidth))
+        self.Slopes = np.reshape(Data['FractionalSlope'], (self.DataHeight, self.DataWidth))
+        self.XunitV = np.reshape(Data['XSlopeUnitVector'], (self.DataHeight, self.DataWidth))
+        self.YunitV = np.reshape(Data['YSlopeUnitVector'], (self.DataHeight, self.DataWidth))
         ### ----- ###
-        
         
     ### END __init__
         
@@ -117,6 +107,26 @@ class Landscape:
         Inputs:
             -
         '''
+        
+        
+        
+        # testing #
+        plt.imshow(self.Slopes, cmap='terrain', interpolation='nearest')  
+        plt.colorbar(label='Gradient Intensity (unitless)') 
+        
+        #contours = plt.contour(self.XPositions, self.YPositions, self.ZPositions, levels=15, colors='white', linewidths=1)
+        contours = plt.contour(self.ZPositions, levels=3, cmap = 'coolwarm', linewidth = 0.5) #colors='white', linewidths=0.5)
+
+
+
+        # Label the contours
+        plt.clabel(contours, inline=True, fontsize=8, fmt="%.0f")
+        
+        
+        # interesting results so far, it actually looks correct, but funy how pittsburgh has not too many sharp changes...
+        # --> test out mt. rainer and grandcanyon to confirm if its working
+        
+        
     ### END GradientContourDiagram
 ### END Landscape
 
@@ -171,17 +181,22 @@ class Traveler:
     
     
 # ### TESTING ###
-# ### File Selection ###
-# print('SelectData')
-# root = Tk()
-# Path = askopenfilename(title = "Select file", filetypes = (("txt files","*.txt"),("all files","*.*")))
-# FilePath = os.path.split(os.path.abspath(Path))[0] # saves file path as a string
-# FileName = os.path.split(os.path.abspath(Path))[1] # saves file name as a string
-# root.destroy()
+### File Selection ###
+print('SelectData')
+root = Tk()
+Path = askopenfilename(title = "Select file", filetypes = (("txt files","*.txt"),("all files","*.*")))
+FilePath = os.path.split(os.path.abspath(Path))[0] # saves file path as a string
+FileName = os.path.split(os.path.abspath(Path))[1] # saves file name as a string
+root.destroy()
 
-# os.chdir(FilePath) # navigates to directory file is stored within
+os.chdir(FilePath) # navigates to directory file is stored within
 
-# Pittsburgh = Landscape(FileName)
+Pittsburgh = Landscape(FileName)
+
+
+
+
+Pittsburgh.GradientContourDiagram()
 
 # print(Pittsburgh.DataHeight)
 # print(Pittsburgh.DataWidth)
