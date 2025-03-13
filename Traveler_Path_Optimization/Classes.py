@@ -108,19 +108,31 @@ class Landscape:
             -
         '''
         
-        
+        plt.figure('', figsize = (24, 24))
         
         # testing #
         plt.imshow(self.Slopes, cmap='terrain', interpolation='nearest')  
         plt.colorbar(label='Gradient Intensity (unitless)') 
         
         #contours = plt.contour(self.XPositions, self.YPositions, self.ZPositions, levels=15, colors='white', linewidths=1)
-        contours = plt.contour(self.ZPositions, levels=3, cmap = 'coolwarm', linewidth = 0.5) #colors='white', linewidths=0.5)
+        #contours = plt.contour(self.ZPositions, levels=4, cmap = 'coolwarm', linewidth = 0.5) #colors='white', linewidths=0.5)
 
 
 
         # Label the contours
-        plt.clabel(contours, inline=True, fontsize=8, fmt="%.0f")
+        #plt.clabel(contours, inline=True, fontsize=8, fmt="%.0f")
+        
+        # Plot Formatting #
+        plt.colorbar(label='Gradient Intensity (unitless)') 
+        
+        plt.title(f'Gradient Map')  
+        plt.xlabel('X-Position')
+        plt.ylabel('Y-Position')
+        
+        plt.tight_layout()
+        
+        # Saving Figure #
+        #plt.savefig(f'Elevation-{Location}_Bin{BinFactor}-{BinMode}.png')
         
         
         # interesting results so far, it actually looks correct, but funy how pittsburgh has not too many sharp changes...

@@ -77,7 +77,7 @@ def LonLat_to_XY(Longitudes, Latitudes, CRS):
 ### END LonLat_to_XY
 
 
-def Gradient(Elevation):
+def Gradient(X, Y, Elevation):
     ''' 
     Description: Computes the gradient (slope) of the cloud point data at each point and returns the magnitude and 
     direction of the gradient at each defined point
@@ -91,8 +91,43 @@ def Gradient(Elevation):
         - Y_unitV: list of floats, range of y-directional unit vectors associated with the direction of slope at each point
     '''
     
+    # Reshaping X and Y Data #
+    Height, Width = Elevation.shape
+    
+    X_2d = np.reshape(X, (Height, Width))
+    Y_2d = np.reshape(Y, (Height, Width))
+    
+    
+    # Computing Absolute Differences Between Points #
+    dx = np.diff(X_2d, axis=1)  # Differences along x-axis (vertical column differences)
+    dy = np.diff(Y_2d, axis=0)  # Differences along y-axis (horizontal row differences)
+    
+    # Pad to match the original shape of Elevation
+    dx = np.pad(dx, ((0, 0), (0, 1)), mode='edge')  # Pad right side (last column) to match shape of Elevation
+    dy = np.pad(dy, ((0, 1), (0, 0)), mode='edge')  # Pad bottom side (last row) to match shape of Elevation
+    # NOTE: very last point is "simulated" however it is one point int the entire grid, located in a bottom right corner 
+    
     # Finding Elevation Gradients #
-    dz_dx, dz_dy = np.gradient(Elevation) # gradient of the elvation matrix
+    dz_x, dz_y = np.gradient(Elevation, edge_order=1) # gradient of the elvation matrix
+    
+    dz_dx = ((dz_x * 2) / dx) / np.median(dx) # x non-uniform seperation correction
+    dz_dy = ((dz_y * 2) / dy) / np.median(dy) # y non-uniform seperation correction
+    '''
+    Due to the raster point being non-uniformly spaced (since we are projecting of a plane unto a sphere)
+    then we must use the np.gradient function to find the z-seperation in two dimensions:
+        
+        dz = ( z[i+1] - z[1] ) / 2  , for both dimensions
+        
+    Then we must weight this by the seperation in both x and y (dx and dy) by the correction factor above
+    giving us:
+        
+        dz/dx = ( z[i+1] - z[i] ) / ( x[i+1] - x[i] )
+        dz/dy = ( z[i+1] - z[i] ) / ( y[i+1] - y[i] )
+        
+    The additional division of the median spacing (np.median(dx or dy) renormalizes the points to the 
+    true fractional slope, where if tan^-1(Slope) was taken it would give the angle of the land at that 
+    particular point. This way we can accurately model the terrain. 
+    '''
 
     # Computing slope as a fraction (rise/run) #
     Slope = np.sqrt(dz_dx**2 + dz_dy**2)
@@ -243,7 +278,7 @@ def DataRetrieve(BinMode, BinFactor):
         Slope = np.tan(np.radians(SlopeAngle)) # Converts slope to fraction
     
     else: # Band 2 data unavailable
-        Slope, X_unitV, Y_unitV = Gradient(Elevation)
+        Slope, X_unitV, Y_unitV = Gradient(X, Y, Z)
         Slope = Slope[Rows, Columns] # Determining Slope at pixels with data
     ###
     
@@ -389,8 +424,8 @@ def PlotElevation(Z, BinMode, BinFactor, Location):
     plt.colorbar(label='Elevation (m)')  
     
     plt.title(f'Elevation Map of {Location}')  
-    plt.xlabel('X-Position (m)')
-    plt.ylabel('Y-Position (m)')
+    plt.xlabel('X-Position')
+    plt.ylabel('Y-Position')
     
     plt.tight_layout()
     
@@ -411,7 +446,7 @@ def MAIN():
     ############### User Inputs ###############
     BinFactor = 40 # interger, value describing the number of pixels (data points) in each bin
     BinMode = 'Sampling' # string, variable description which bin mode is used when compressing the data, see DataRetrieve for more details
-    Location = 'Pittsburgh' # string, name of location being displayed (nearest city / landmark)
+    Location = 'GrandCanyon' # string, name of location being displayed (nearest city / landmark)
     OutputMode = 'OptimalControl' # string, name of ouput mode being considered for the output file (see OutputFile for more details)
     ############### ----------- ###############
 
