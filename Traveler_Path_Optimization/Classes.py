@@ -2,7 +2,7 @@
 '''
 Author: Thomas Joyce
 
-Version: 
+Version: 0.02
 
 Class: MATH 496T - Mathematics of Generative AI 
 
@@ -135,11 +135,20 @@ class Landscape:
         #plt.savefig(f'Elevation-{Location}_Bin{BinFactor}-{BinMode}.png')
         
         
-        # interesting results so far, it actually looks correct, but funy how pittsburgh has not too many sharp changes...
-        # --> test out mt. rainer and grandcanyon to confirm if its working
-        
         
     ### END GradientContourDiagram
+    
+    
+    def SpeedFunction(self):
+        '''
+        Description:
+            
+        Inputs:
+            - 
+        
+        
+        '''
+    
 ### END Landscape
 
 
@@ -152,32 +161,53 @@ class Traveler:
         
     '''
     
-    def __init__(self, DataFileName):
+    def __init__(self):
         ''' 
-        Description:
+        Description: we initilaze the initial and final poitions here, takes the xand y positions to begin with
+        maybe we can take either the indeces or the actual meter position
             
         Inputs:
-            - D 
+            - 
             -  
         '''
     ### END __init__
     
     
-    def PlanRoute(self):
+    def PlanRoute(self, WeighingSteps=5):
         ''' 
         Description: this is the function that will plan the 5 steps out and weight each accordingly, make a user
-        defined amount of how many steps out it needs to plan
+        defined amount of how many steps out it needs to plan.
+        
+        calls plan step which will update the hypothetical (call it planning) position and store the cost of that step
+        then we do plan step again from our new spot, do this WeighingSteps amount of times
+        DO IT FOR EACH CARDINAL DIRECTION!
+        
+        it should basically return 4 paths, with 1st step taken to get on that path, the cost of each path will be returned
+        as well and will essentially take into account each step in the path
+        
+        
             
-        Inputs:
-            -
+        Inputs: 
+            - WeighingSteps: interger, number of steps to be weighed before a decision is made, defualt is 5
         '''
     ### END PlanRoute
+    
+    def PlanStep(self):
+        '''
+        Description: I want this function to plan what step to take, essentially we would be doing the take step function 
+        but updating some sort of planning position essentially determines which of the 4 directions is best
+        and stores the updated position and the cost of that step
+        
+        Inputs:
+            - 
+
+        '''
     
     
     def TakeStep(self):
         ''' 
-        Description: weights the routes outputted by plan route and chooses the best one and takes a step
-        updating its position and storing the movement in the file to keep trakc of what happened, perhpas I should 
+        Description: weighs the routes outputted by plan route and chooses the best one and takes a step
+        updating its position and storing the movement in the file to keep trakc of what happened, perhaps I should 
         have an update file function, called by this guy?
             
         Inputs:
@@ -212,5 +242,16 @@ Pittsburgh.GradientContourDiagram()
 
 # print(Pittsburgh.DataHeight)
 # print(Pittsburgh.DataWidth)
+
+
+
+
+'''
+I want a select input function with the tkinter code in it, maybe a mode, folder or file
+
+then import my classes and run landscape
+
+'''
+
         
     
