@@ -375,7 +375,7 @@ def OutputFile(X, Y, Z, Slope, X_unitV, Y_unitV, Location, BinFactor, BinMode, O
     Z = Z.flatten()
     
     
-    if OutputMode == 'OptimalControl':
+    if OutputMode.lower() == 'optimalcontrol':
         File = open(f'{OutputMode}Elevation-{Location}_Bin{BinFactor}-{BinMode}.txt', 'w')
         
         # Writing Custom Header #
@@ -390,7 +390,7 @@ def OutputFile(X, Y, Z, Slope, X_unitV, Y_unitV, Location, BinFactor, BinMode, O
         ###
     ###
     
-    if OutputMode == '3DPrint':
+    if OutputMode.lower() == '3dprint':
         File = open(f'{OutputMode}Elevation-{Location}_Bin{BinFactor}-{BinMode}.asc', 'w')
         
         for index in range(0, len(X)): # Iterating through each point and writing data to file
@@ -444,14 +444,14 @@ def MAIN():
     '''
     
     ############### User Inputs ###############
-    BinFactor = 40 # interger, value describing the number of pixels (data points) in each bin
-    BinMode = 'Sampling' # string, variable description which bin mode is used when compressing the data, see DataRetrieve for more details
+    BinFactor = 1 # interger, value describing the number of pixels (data points) in each bin
+    BinMode = 'none' # string, variable description which bin mode is used when compressing the data, see DataRetrieve for more details
     Location = 'GrandCanyon' # string, name of location being displayed (nearest city / landmark)
-    OutputMode = 'OptimalControl' # string, name of ouput mode being considered for the output file (see OutputFile for more details)
+    OutputMode = '3DPrint' # string, name of ouput mode being considered for the output file (see OutputFile for more details)
     ############### ----------- ###############
 
     # Quick correction if you forget to adjust BinFactor #
-    if BinMode == 'None': 
+    if BinMode.lower() == 'none': 
         BinFactor = 1
 
     X, Y, Z, Slope, X_unitV, Y_unitV, Metadata = DataRetrieve(BinMode, BinFactor)
