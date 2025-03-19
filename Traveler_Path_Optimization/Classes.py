@@ -34,6 +34,7 @@ import glob
 import os
 # Plotting and Statistics
 from matplotlib import pyplot as plt
+import matplotlib.colors as mcolors
 import matplotlib.ticker as tick
 from scipy import stats
 # Raster Manipulation
@@ -131,7 +132,7 @@ class Landscape:
         #contours = plt.contour(self.XPositions, self.YPositions, self.ZPositions, levels=15, colors='white', linewidths=1)
         #contours = plt.contour(self.ZPositions, levels=4, cmap = 'coolwarm', linewidth = 0.5) #colors='white', linewidths=0.5)
         #contours = plt.contour(self.Slopes, levels=[0.5, 1.0, 2, 4], cmap = 'coolwarm', linewidths=2)
-        Fcountours = plt.contourf(self.Slopes, levels=np.linspace(self.Slopes.min(), 1, 100), cmap='Blues')
+        #Fcountours = plt.contourf(self.Slopes, levels=np.linspace(self.Slopes.min(), 1, 100), cmap='Blues')
         
         
         ''' essentially humans cannot climb a slope less than 45 degress or in my case 1 '''
@@ -154,7 +155,7 @@ class Landscape:
     ### END GradientContourDiagram
     
     
-    def SpeedFunction(self, Obstacles, LimitingAngle):
+    def SpeedFunction(self, Obstacles, LimitingAngle=45):
         '''
         Description: I think speed step will take upon the roll of multiplicative factor for regions of decent gradient
         I think this function will essentially just determine how passable the terrain is
@@ -177,26 +178,41 @@ class Landscape:
             0 = full stop (can't cross basically) for example a huge rock you cannot walk overtop of
             0.4 --> walking through a light speed slowing your movement by 60 %
         
+        
+        put a note in that the limiting angle must be smaller than 50 (at least for the version I have now)
+        
         '''
         
+        
+        
+        
+        ''' this could be a wasted line... delete when idea is clear to make it more pythonic... '''
+        # Initializing Speed Matrix # 
         Speed = np.zeros((self.DataHeight, self.DataWidth))
         
-        ### so if obstacles  = what is above then we have this...
-        ### Speed = Obstacles
-        ### Speed[(Slopes > np.arctan(np.radians(LimitingAngle)))] = 0
+        # Implementing Obstacles into Speed Function #
+        Speed = Obstacles
+        
+        # Discouraged Movement at Limiting Angle #
+        Speed[(self.Slopes > np.arctan(np.radians(LimitingAngle)))] = 0.01 
+        ''' Essentially we are introducing a small value to discourage travel at the limiting angle
+        (default is 45 degrees) wherin the travller can still traverse the space (typically calmoring up with
+        their hands and feet), but is highly discouraged to as it is unsafe (especially with mud, gravel, or snow),
+        slow, and most likely out of the capabilities of most travelers. '''
+        
+        # Unable to be traveled due to steep gradient (>50 degrees angle) #
+        Speed[(self.Slopes > np.arctan(np.radians(50)))] = 0
+        ''' At any angle greater than 45 degrees you are at a tan^-1(>45) > 1, wherein you
+        would be rising more than the run, essentially requiring climbing gear at this point '''
+        
+        
+        
+        
+        
+        
         ### --> what should be left is basically the speed multiplier values at each navigable point
         
-        
-        # this one first #
-        Speed = Speed[np.where(self.Slopes <= np.artan(LimitingAngle))] = 1 # crossable terrain under my limiting angle
-        Speed = Speed[np.where(Obstacles) != 0] = (np.where(Obstacles) != 0)
-        
-        
-        # Do this stuff last #
-        Speed = Speed[np.where(self.Slopes > np.arctan(LimitingAngle))] = 0 # no speed past my limiting angle
-        
-        
-        
+        self.SpeedMatrix = Speed
     ### END SpeedFunction
     
 ### END Landscape
@@ -211,7 +227,7 @@ class Traveler:
         
     '''
     
-    def __init__(self):
+    def __init__(self, StartingPosition, EndingPosition):
         ''' 
         Description: we initilaze the initial and final poitions here, takes the xand y positions to begin with
         maybe we can take either the indeces or the actual meter position
@@ -223,7 +239,7 @@ class Traveler:
     ### END __init__
     
     
-    def PlanRoute(self, WeighingSteps=5):
+    def PlanRoute(self, StartingPosition, WeighingSteps=5):
         ''' 
         Description: this is the function that will plan the 5 steps out and weight each accordingly, make a user
         defined amount of how many steps out it needs to plan.
@@ -238,11 +254,59 @@ class Traveler:
         
             
         Inputs: 
+            - Position: list of intergers, representing the indeces of the position in x and y (ex: [column index (x), row index(y)])
+            of the traveler at the start of the plan
             - WeighingSteps: interger, number of steps to be weighed before a decision is made, defualt is 5
         '''
+        
+        
+        
     ### END PlanRoute
     
-    def PlanStep(self):
+    
+    def SpeedStep(self, StartingPosition, EndingPosition, LandScape):
+        '''
+        Description: essentially this function will do the delta Z calculation, time that 
+        by the gradient and determine the speed of that step
+            
+        
+        Inputs:
+            - StartingPosition:
+            - EndingPosition:
+                
+        Returns:
+            - Speed: 
+
+        '''
+        
+        x0, y0 = StartingPosition[0], StartingPosition[1]
+        xf,yf = EndingPosition[0], EndingPosition[1]
+        
+        ElevationChange = (LandScape.ZPositions[yf][xf] - LandScape.ZPositions[y0][x0])
+        Gradient = LandScape.Slopes[yf][xf]
+        SpeedMultiplier = LandScape.SpeedMatrix[yf][xf]
+        
+        
+        
+        ### so for the actual speed calculation I feel like what I should do is this...
+        # --> basically I am going to use an exponetial function? 
+        # --> Let's say for a negative ElevationChange then I have an exponential where
+        # speed = e^(Gradient / Speed Multiplier) - 1 < slower at low gradients, steeper ones and your quicker, running down hill
+        # For a positive elevation change then I have a decaying exponential where
+        # speed = e^-(Gradient / Speed Multiplier) < faster at low gradients, steeper ones and your slower, running uphill
+        
+        # as this equation stands now if my gradient is 1 (45 degrees) and my speed multiplier is 1,
+        # then you have a speed evaulated at e^-1 --> 0.36...
+        
+        # does this feel right? or maybe I should just do it as a line? ending to 0.01 or whatever at my limiting angle
+        # the lines might be a better choice
+        
+        
+        
+    ### END SpeedStep
+    
+    
+    def PlanStep(self, Position, LandScape):
         '''
         Description: I want this function to plan what step to take, essentially we would be doing the take step function 
         but updating some sort of planning position essentially determines which of the 4 directions is best
@@ -262,9 +326,28 @@ class Traveler:
         
         
         Inputs:
-            - 
-
+            - Position: list of intergers, representing the indeces of the position in x and y (ex: [column index (x), row index(y)])
+            
+            
+        
         '''
+        
+        # Unpacking Traveler Position Values #
+        x, y = Position[0], Position[1]
+        
+        # Northward Route (up) #
+        NorthSpeed = self.SpeedStep(Position, [x, (y + 1)], LandScape)
+        
+        
+        # ok so we can access the position we are at through the indeces, we can also access neighboring positions as well
+        # use the speed matrix and the elevation change * gradient to determine a speed value, relative to the current
+        # position to assemble an idea of what step to take
+        
+        # then we actually take the step updating the new position and saving the "speed value" we took
+        
+        # evaluate which speed it biggest, then return the speed of this planned step and the direction "north", etc
+        
+    ### END PlanStep
     
     
     def TakeStep(self):
@@ -301,7 +384,28 @@ Pittsburgh = Landscape(FileName)
 
 
 
-Pittsburgh.GradientContourDiagram()
+#Pittsburgh.GradientContourDiagram()
+
+
+
+
+'''  '''
+### this is good for testing, keep this lil nuggest of code, for seeing how passable the terrain is... 
+Pittsburgh.SpeedFunction(np.ones((Pittsburgh.DataHeight, Pittsburgh.DataWidth)), 45)
+
+cmap = mcolors.ListedColormap(['red', 'yellow', 'green'])
+boundaries = [0,0.0099,0.0101, 1]
+norm = mcolors.BoundaryNorm(boundaries, cmap.N)
+
+plt.imshow(Pittsburgh.SpeedMatrix, cmap = cmap, norm = norm)
+
+plt.colorbar(label='passability') 
+''' '''
+
+
+
+
+
 
 # print(Pittsburgh.DataHeight)
 # print(Pittsburgh.DataWidth)

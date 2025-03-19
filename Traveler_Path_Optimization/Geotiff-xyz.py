@@ -444,10 +444,10 @@ def MAIN():
     '''
     
     ############### User Inputs ###############
-    BinFactor = 1 # interger, value describing the number of pixels (data points) in each bin
-    BinMode = 'none' # string, variable description which bin mode is used when compressing the data, see DataRetrieve for more details
-    Location = 'GrandCanyon' # string, name of location being displayed (nearest city / landmark)
-    OutputMode = '3DPrint' # string, name of ouput mode being considered for the output file (see OutputFile for more details)
+    BinFactor = 10 # interger, value describing the number of pixels (data points) in each bin
+    BinMode = 'Median' # string, variable description which bin mode is used when compressing the data, see DataRetrieve for more details
+    Location = 'Pittsburgh' # string, name of location being displayed (nearest city / landmark)
+    OutputMode = 'OptimalControl' # string, name of ouput mode being considered for the output file (see OutputFile for more details)
     ############### ----------- ###############
 
     # Quick correction if you forget to adjust BinFactor #
