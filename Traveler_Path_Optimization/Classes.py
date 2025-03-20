@@ -2,7 +2,7 @@
 '''
 Author: Thomas Joyce
 
-Version: 0.02
+Version: 0.2
 
 Class: MATH 496T - Mathematics of Generative AI 
 
@@ -236,10 +236,15 @@ class Traveler:
             - 
             -  
         '''
+        
+        
+        self.Position = StartingPosition
+        
+        self.Destination = EndingPosition
     ### END __init__
     
     
-    def PlanRoute(self, StartingPosition, WeighingSteps=5):
+    def PlanRoute(self, StartingPosition, LandScape, WeighingSteps=5):
         ''' 
         Description: this is the function that will plan the 5 steps out and weight each accordingly, make a user
         defined amount of how many steps out it needs to plan.
@@ -251,6 +256,7 @@ class Traveler:
         it should basically return 4 paths, with 1st step taken to get on that path, the cost of each path will be returned
         as well and will essentially take into account each step in the path
         
+        note we need the speed step evaluation for initial move
         
             
         Inputs: 
@@ -258,8 +264,66 @@ class Traveler:
             of the traveler at the start of the plan
             - WeighingSteps: interger, number of steps to be weighed before a decision is made, defualt is 5
         '''
+        # Unpacking Traveler Position Values #
+        x0, y0 = StartingPosition[0], StartingPosition[1]
         
+        Step = 1 # step taken by traveler, set to one to account for predefined routes below
+        NorthTotalSpeed, EastTotalSpeed, SouthTotalSpeed, WestTotalSpeed = 0, 0, 0, 0 # Evaluating Criterion (value to be maximized)
         
+        ''' note we could do the below code in a single function honestly '''
+        
+        # Planning Northward Route (up starting move) #
+        NorthTotalSpeed += self.SpeedStep(StartingPosition, [x0, (y0 - 1)], LandScape) # accounts for initial predefined move
+        PlanPosition = [x0, (y0 - 1)] # represents the first step (Step = 1)
+        while Step <= WeighingSteps:
+            PlanSpeed, PlanPosition = self.PlanStep(self, PlanPosition, LandScape)
+            Step += 1
+            NorthTotalSpeed += PlanSpeed
+        ###
+        Step = 1
+        
+        # Planning Eastward Route (right starting move) #
+        EastTotalSpeed += self.SpeedStep(StartingPosition, [(x0 + 1), y0], LandScape) # accounts for initial predefined move
+        PlanPosition = [(x0 + 1), y0] # represents the first step (Step = 1)
+        while Step <= WeighingSteps:
+            PlanSpeed, PlanPosition = self.PlanStep(self, PlanPosition, LandScape)
+            Step += 1
+            EastTotalSpeed += PlanSpeed
+        ###
+        Step = 1
+        
+        # Planning Southward Route (down starting move) #
+        SouthTotalSpeed += self.SpeedStep(StartingPosition, [x0, (y0 + 1)], LandScape) # accounts for initial predefined move
+        PlanPosition = [x0, (y0 + 1)] # represents the first step (Step = 1)
+        while Step <= WeighingSteps:
+            PlanSpeed, PlanPosition = self.PlanStep(self, PlanPosition, LandScape)
+            Step += 1
+            SouthTotalSpeed += PlanSpeed
+        ###
+        Step = 1
+        
+        # Planning Westward Route (left starting move) #
+        WestTotalSpeed += self.SpeedStep(StartingPosition, [(x0 - 1), y0], LandScape) # accounts for initial predefined move
+        PlanPosition = [(x0 - 1), y0] # represents the first step (Step = 1)
+        while Step <= WeighingSteps:
+            PlanSpeed, PlanPosition = self.PlanStep(self, PlanPosition, LandScape)
+            Step += 1
+            WestTotalSpeed += PlanSpeed
+        ###
+        Step = 1
+        
+        ''' NOTE: we need a condition to check for ties ---> propogate out one more step
+        maybe we can do this by casting data into a set and if the set is less than 4 long
+        then maybe we propogate out everything by one more step?'''
+        # Evaluating Optimal Route #
+        UpdatedRoutes = [[x0, (y0 - 1)], [(x0 + 1), y0], [x0, (y0 + 1)], [(x0 - 1), y0]] # [North, East, South, West] first move 
+        PlannedTotalSpeeds = [NorthTotalSpeed, EastTotalSpeed, SouthTotalSpeed, WestTotalSpeed]
+        
+        OptimalSpeed = max(PlannedTotalSpeeds)
+        
+        OptimalRoute = UpdatedRoutes[PlannedTotalSpeeds.index(OptimalSpeed)]
+        
+        return OptimalSpeed, OptimalRoute
         
     ### END PlanRoute
     
@@ -268,11 +332,13 @@ class Traveler:
         '''
         Description: essentially this function will do the delta Z calculation, time that 
         by the gradient and determine the speed of that step
-            
+        
+        This speed step function is good too becuase we can eventually factor in mass and other things too!
+        which would pull on the self parameter
         
         Inputs:
-            - StartingPosition:
-            - EndingPosition:
+            - StartingPosition: list of intergers, representing the indeces of the starting position in x and y (ex: [column index (x), row index(y)])
+            - EndingPosition: list of intergers, representing the indeces of the ending position in x and y (ex: [column index (x), row index(y)])
                 
         Returns:
             - Speed: 
@@ -282,9 +348,9 @@ class Traveler:
         x0, y0 = StartingPosition[0], StartingPosition[1]
         xf,yf = EndingPosition[0], EndingPosition[1]
         
-        ElevationChange = (LandScape.ZPositions[yf][xf] - LandScape.ZPositions[y0][x0])
-        Gradient = LandScape.Slopes[yf][xf]
-        SpeedMultiplier = LandScape.SpeedMatrix[yf][xf]
+        ElevationChange = (LandScape.ZPositions[yf][xf] - LandScape.ZPositions[y0][x0]) # must switch order of indexing
+        Gradient = LandScape.Slopes[yf][xf]                                             # becuase python indexes row then
+        SpeedMultiplier = LandScape.SpeedMatrix[yf][xf]                                 # column so y then x 
         
         
         
@@ -316,13 +382,24 @@ class Traveler:
             faster when going -deltaZ (higher to lower), unless its super steep
             slower when going +deltaZ (lower to higher), unless its super steep
             normal at 0 = deltaZ (even terrain)
-            
-        so maybe we need to have a Speedstep function that basically takes my landscape object's speed function and 
-        multiplies the speed by an additional factor depending upon the deltaZ of the move to account for this
-        obviously my speed function will be already dependent upon the gradient 
         
-        This speed step function is good too becuase we can eventually factor in mass and other things too!
-        which would pull on the self parameter
+        
+        NOTE: we can have a check here for for bounds, essentially if x = 0 or Landscape.Datawidth --> bound --> must consider only 3 paths
+                                                                      y = 0 or Landscape.DataHeight --> bound --> must consider only 3 paths          
+        
+        --> define a matrix where it is: [ [topleft, top, top, top, top, ..., topright] 
+                                           [left, 0, 0, 0, 0, ..., right]
+                                           .
+                                           .
+                                           .
+                                           [bottomleft, bottom, bottom, bottom, ..., bottomright] ]
+        
+        --> then we should have a dictionary with dic = {'topleft': ['East', South], 'top': ['East', 'South', 'West'], ... etc}
+        --> basically if the position on the matrix is nonzero then we use that key in the dictionary and pass it through some if statements where
+        if 'North' in dic[key] for example, do north plan speed...
+        
+        then we add all values in a list, and the direction in the list too, then we find max, then we find the direction corresponding to entry
+        and pass that off as "bound check"
         
         
         Inputs:
@@ -336,30 +413,54 @@ class Traveler:
         x, y = Position[0], Position[1]
         
         # Northward Route (up) #
-        NorthSpeed = self.SpeedStep(Position, [x, (y + 1)], LandScape)
+        NorthPlanSpeed = self.SpeedStep(Position, [x, (y - 1)], LandScape)
+        
+        # Eastward Route (right) #
+        EastPlanSpeed = self.SpeedStep(Position, [(x + 1), y], LandScape)
+        
+        # Southward Route (down) #
+        SouthPlanSpeed = self.SpeedStep(Position, [x, (y + 1)], LandScape)
+        
+        # Westward Route (left) #
+        WestPlanSpeed = self.SpeedStep(Position, [(x - 1), y], LandScape)
         
         
-        # ok so we can access the position we are at through the indeces, we can also access neighboring positions as well
-        # use the speed matrix and the elevation change * gradient to determine a speed value, relative to the current
-        # position to assemble an idea of what step to take
+        ''' note: if two steps are equally viable we need an if condition to check for this 
+        if this does happen tho, lets just utilize the self and find the step that is closest to the destination '''
+        # Evaluating Best Step #
+        UpdatedPositions = [[x, (y - 1)], [(x + 1), y], [x, (y + 1)], [(x - 1), y]] # [North, East, South, West] Positions 
+        PlannedSpeeds = [NorthPlanSpeed, EastPlanSpeed, SouthPlanSpeed, WestPlanSpeed]
         
-        # then we actually take the step updating the new position and saving the "speed value" we took
+        OptimalSpeed = max(PlannedSpeeds)
         
-        # evaluate which speed it biggest, then return the speed of this planned step and the direction "north", etc
+        OptimalPosition = UpdatedPositions[PlannedSpeeds.index(OptimalSpeed)]
         
+        return OptimalSpeed, OptimalPosition
     ### END PlanStep
     
     
-    def TakeStep(self):
+    def TakeStep(self, LandScape, WeighingSteps):
         ''' 
         Description: weighs the routes outputted by plan route and chooses the best one and takes a step
         updating its position and storing the movement in the file to keep trakc of what happened, perhaps I should 
         have an update file function, called by this guy?
+        
+        the thing is right now this needs to be depedent on the favorability function!!!
             
         Inputs:
             -
         '''
+        
+        ### this is only a step taken based upon the speed, but it needs to be a step taken based upon favorability
+        ### so we need to factor in the nodes or destination values
+        OptimalSpeed, self.Position = self.PlanRoute(self, self.Position, LandScape, WeighingSteps)
+        
+        
+        ### then we need to store the step taken, and the speed taken
+        
     ### END TakeStep
+    
+    
     
 ### END Traveler
     
