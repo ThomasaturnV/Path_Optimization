@@ -348,27 +348,22 @@ class Traveler:
         x0, y0 = StartingPosition[0], StartingPosition[1]
         xf,yf = EndingPosition[0], EndingPosition[1]
         
-        ElevationChange = (LandScape.ZPositions[yf][xf] - LandScape.ZPositions[y0][x0]) # must switch order of indexing
+        #ElevationChange = (LandScape.ZPositions[yf][xf] - LandScape.ZPositions[y0][x0]) # must switch order of indexing
         Gradient = LandScape.Slopes[yf][xf]                                             # becuase python indexes row then
         SpeedMultiplier = LandScape.SpeedMatrix[yf][xf]                                 # column so y then x 
         
         
-        
-        ### so for the actual speed calculation I feel like what I should do is this...
-        # --> basically I am going to use an exponetial function? 
-        # --> Let's say for a negative ElevationChange then I have an exponential where
-        # speed = e^(Gradient / Speed Multiplier) - 1 < slower at low gradients, steeper ones and your quicker, running down hill
-        # For a positive elevation change then I have a decaying exponential where
-        # speed = e^-(Gradient / Speed Multiplier) < faster at low gradients, steeper ones and your slower, running uphill
-        
-        # as this equation stands now if my gradient is 1 (45 degrees) and my speed multiplier is 1,
-        # then you have a speed evaulated at e^-1 --> 0.36...
-        
-        # does this feel right? or maybe I should just do it as a line? ending to 0.01 or whatever at my limiting angle
-        # the lines might be a better choice
+        Speed = SpeedMultiplier * (np.exp(-1 * Gradient))
+        ''' 
+        Wether the travler moves uphil or downhill, their speed will exponentially decay with the gradient
+        models by an e^-x function. Going uphill is slower and harder, while going down hill is slower becuase 
+        the trvaler will have to control their speed to not slip and fall. The favorability function does weight
+        downward movements more heavily however.
+        '''
         
         
         
+        return Speed
     ### END SpeedStep
     
     
@@ -427,6 +422,9 @@ class Traveler:
         
         ''' note: if two steps are equally viable we need an if condition to check for this 
         if this does happen tho, lets just utilize the self and find the step that is closest to the destination '''
+        
+        ''' We need to convert this into favorability stuff '''
+        
         # Evaluating Best Step #
         UpdatedPositions = [[x, (y - 1)], [(x + 1), y], [x, (y + 1)], [(x - 1), y]] # [North, East, South, West] Positions 
         PlannedSpeeds = [NorthPlanSpeed, EastPlanSpeed, SouthPlanSpeed, WestPlanSpeed]
@@ -437,6 +435,21 @@ class Traveler:
         
         return OptimalSpeed, OptimalPosition
     ### END PlanStep
+    
+    
+    def Favorability(self):
+        '''
+        
+        '''
+        
+        # F = speed * C * (ri - rf)^2        
+        
+        # make usre to weigh downward elevation changes more heavily, you favor downhill climbs more than
+        # uphill ones, maybe just an ifcheck if elevation change = negative then 1.1 times F or something like that 
+       
+    
+
+    ### END Favorability
     
     
     def TakeStep(self, LandScape, WeighingSteps):
@@ -485,7 +498,7 @@ Pittsburgh = Landscape(FileName)
 
 
 
-#Pittsburgh.GradientContourDiagram()
+Pittsburgh.GradientContourDiagram()
 
 
 
