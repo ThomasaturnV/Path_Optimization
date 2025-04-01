@@ -2,7 +2,7 @@
 '''
 Author: Thomas Joyce
 
-Version: 0.2
+Version: 0.21
 
 Class: MATH 496T - Mathematics of Generative AI 
 
@@ -16,7 +16,7 @@ Description: Central Repository for all my classes used in the development of my
     you move, so the two objects would have to interact!
     
     
-for this entire thing lets index bu i and j, not the actual position value, let us just consider the pixel values
+for this entire thing lets index be i and j, not the actual position value, let us just consider the pixel values
 
 
 Eventually for the energy function --> https://www.outsideonline.com/health/training-performance/easy-hike-up-hills/?scope=anon
@@ -59,7 +59,7 @@ class Landscape:
         UPDATE THIS AS IT IS DEVELOPED!!!
     '''
     
-    def __init__(self, DataFileName):
+    def __init__(self, DataFileName, Location):
         ''' 
         Description: Initializes an instance of the Landscape class based upon an input file. This function
         reads, and organizes the data into shaped arrays based upon original binned file specifications
@@ -68,6 +68,7 @@ class Landscape:
             
         Inputs:
             - DataFileName: string, filename of data to be read in. File must be in "OptimalControl" Format.
+            - Location: string, Name of locatio being referenced for the terrain (closest city/landmark)
             
         Returns: No variables returned, but "self" variables can be accessed throughout the landscape class.
             - DataHeight: interger, number representing the height (number of rows) of the point cloud
@@ -79,6 +80,9 @@ class Landscape:
             - XunitV:
             - YunitV:
         '''
+        
+        self.Location = Location
+        
         ### File Management ###
         # Opening File #
         File = open(DataFileName, 'r')
@@ -88,8 +92,10 @@ class Landscape:
         
         # Reading Header #
         Partition = File.readline() # = '---------- Geotiff Conversion ----------'
-        self.DataHeight = int(File.readline().split(':')[1])
-        self.DataWidth = int(File.readline().split(':')[1])
+        self.DataHeight = int(File.readline().split(':')[1]) # = 'Bin Height: ___' 
+        self.DataWidth = int(File.readline().split(':')[1]) # = 'Bin Width: ___'
+        self.BinMode = str(File.readline().split(':')[1][1:-2]) # = 'Bin Mode Used: ___'
+        self.BinFactor = int(File.readline().split(':')[1]) # = 'Bin Factor Used: ___'
         
         # Closing File #
         File.close()
@@ -123,16 +129,24 @@ class Landscape:
             -
         '''
         
-        plt.figure('', figsize = (24, 24))
+        plt.figure('Gradient', figsize = (20, 20))
         
         # testing #
-        plt.imshow(self.Slopes, cmap='terrain', interpolation='nearest')  
-        plt.colorbar(label='Gradient Intensity (unitless)') 
+        plt.imshow(self.Slopes, cmap='binary', interpolation='nearest')  
+        cbar = plt.colorbar(label='Gradient Value [tan(angle of slope)]') 
+        cbar.ax.tick_params(labelsize=20)  # Change the font size of the tick labels
+        cbar.set_label('Gradient Value [tan(angle of slope)]', fontsize=25)  # Change label font size
         
         #contours = plt.contour(self.XPositions, self.YPositions, self.ZPositions, levels=15, colors='white', linewidths=1)
         #contours = plt.contour(self.ZPositions, levels=4, cmap = 'coolwarm', linewidth = 0.5) #colors='white', linewidths=0.5)
         #contours = plt.contour(self.Slopes, levels=[0.5, 1.0, 2, 4], cmap = 'coolwarm', linewidths=2)
         #Fcountours = plt.contourf(self.Slopes, levels=np.linspace(self.Slopes.min(), 1, 100), cmap='Blues')
+        
+        
+        #contours = plt.contour(self.Slopes, levels=[1.0, 1.19175359259421], cmap = 'coolwarm', linewidths=2, fontsize = 30)
+        '''
+        tan(45) > 1.0
+        tan(50) > 1.19175359259421 '''
         
         
         ''' essentially humans cannot climb a slope less than 45 degress or in my case 1 '''
@@ -141,17 +155,19 @@ class Landscape:
         #plt.clabel(contours, inline=True, fontsize=8, fmt="%.0f")
         
         # Plot Formatting #
-        plt.colorbar(label='Gradient Intensity (unitless)') 
+        #plt.colorbar(label='Gradient Intensity (unitless)') 
         
-        plt.title(f'Gradient Map')  
-        plt.xlabel('X-Position')
-        plt.ylabel('Y-Position')
+        plt.title(f'Gradient Intensity Map of {self.Location}', fontsize = 45)  
+        plt.xlabel('X-Position [pixels]', fontsize = 40)
+        plt.ylabel('Y-Position [pixels]', fontsize = 40)
+        
+        plt.tick_params(axis='x', labelsize=20)
+        plt.tick_params(axis='y', labelsize=20)
         
         plt.tight_layout()
         
         # Saving Figure #
-        #plt.savefig(f'Elevation-{Location}_Bin{BinFactor}-{BinMode}.png')
-        
+        plt.savefig(f'GradientIntensityMap_{self.Location}_Bin{self.BinFactor}-{self.BinMode}.png')
     ### END GradientContourDiagram
     
     
@@ -194,19 +210,26 @@ class Landscape:
         Speed = Obstacles
         
         # Discouraged Movement at Limiting Angle #
-        Speed[(self.Slopes > np.arctan(np.radians(LimitingAngle)))] = 0.01 
+        Speed[(self.Slopes > np.arctan(np.radians(LimitingAngle)))] *= 0.1 
         ''' Essentially we are introducing a small value to discourage travel at the limiting angle
-        (default is 45 degrees) wherin the travller can still traverse the space (typically calmoring up with
+        (default is 45 degrees) wherein the traveler can still traverse the space (typically calmoring up with
         their hands and feet), but is highly discouraged to as it is unsafe (especially with mud, gravel, or snow),
         slow, and most likely out of the capabilities of most travelers. '''
         
         # Unable to be traveled due to steep gradient (>50 degrees angle) #
-        Speed[(self.Slopes > np.arctan(np.radians(50)))] = 0
+        Speed[(self.Slopes > np.arctan(np.radians(50)))] *= 0
         ''' At any angle greater than 45 degrees you are at a tan^-1(>45) > 1, wherein you
         would be rising more than the run, essentially requiring climbing gear at this point '''
         
         
+        Speed = Speed * (np.exp(-1 * self.Slopes))
         
+        ''' 
+        Wether the travler moves uphil or downhill, their speed will exponentially decay with the gradient
+        models by an e^-x function. Going uphill is slower and harder, while going down hill is slower becuase 
+        the trvaler will have to control their speed to not slip and fall. The favorability function does weight
+        downward movements more heavily however.
+        '''
         
         
         
@@ -214,6 +237,46 @@ class Landscape:
         
         self.SpeedMatrix = Speed
     ### END SpeedFunction
+    
+    
+    def VisualizingSpeedFunction(self):
+        ''' '''
+        
+        plt.figure('Speed', figsize = (20, 20))
+        
+        self.SpeedFunction(np.ones((self.DataHeight, self.DataWidth)), 45)
+
+        #cmap = mcolors.ListedColormap(['red', 'yellow', 'green'])
+        #boundaries = [0,0.0099,0.0101, 1]
+        #norm = mcolors.BoundaryNorm(boundaries, cmap.N)
+
+        #plt.imshow(self.SpeedMatrix, cmap = cmap, norm = norm)
+        
+        ### combining speed functional form into everything ###
+        plt.imshow(self.SpeedMatrix, cmap = 'plasma') # cool to see what is not passable, magma to see gradient based structure,, 
+        cbar = plt.colorbar(label='Ratio of Max Speed')
+        cbar.ax.tick_params(labelsize=20)
+        cbar.set_label('Ratio of Max Speed', fontsize=25)
+        ### ''''''''''''''''''''''''''''''''''''''''''''''' ###
+        
+
+        #cbar = plt.colorbar(label='Speed Multiplier') 
+        #cbar.ax.tick_params(labelsize=0)  # Change the font size of the tick labels
+        #cbar.set_label('Speed Multiplier (Red = 1, Yellow = 0.01, Green = 1)', fontsize=25)  # Change label font size
+        
+        plt.title(f'Speed Function of {self.Location}', fontsize = 45)  
+        plt.xlabel('X-Position [pixels]', fontsize = 40)
+        plt.ylabel('Y-Position [pixels]', fontsize = 40)
+        
+        plt.tick_params(axis='x', labelsize=20)
+        plt.tick_params(axis='y', labelsize=20)
+        
+        plt.tight_layout()
+        
+        # Saving Figure #
+        plt.savefig(f'LandscapeSpeedFunction_{self.Location}_Bin{self.BinFactor}-{self.BinMode}.png')
+    ### END VisualizingSpeedFunction
+        
     
 ### END Landscape
 
@@ -227,24 +290,31 @@ class Traveler:
         
     '''
     
-    def __init__(self, StartingPosition, EndingPosition):
+    def __init__(self, StartingPosition, Nodes, LandScape):
         ''' 
         Description: we initilaze the initial and final poitions here, takes the xand y positions to begin with
         maybe we can take either the indeces or the actual meter position
             
         Inputs:
-            - 
-            -  
+            - StartingPosition:
+            - Nodes:
+            - LandScape:
         '''
         
+        ### Temporary Variables ###
+        self.C = 1
+        
+        # ----- #
         
         self.Position = StartingPosition
         
-        self.Destination = EndingPosition
+        self.Nodes = Nodes
+        
+        self.LandScape = LandScape
     ### END __init__
     
     
-    def PlanRoute(self, StartingPosition, LandScape, WeighingSteps=5):
+    def PlanRoute(self, StartingPosition, WeighingSteps=5):
         ''' 
         Description: this is the function that will plan the 5 steps out and weight each accordingly, make a user
         defined amount of how many steps out it needs to plan.
@@ -268,47 +338,47 @@ class Traveler:
         x0, y0 = StartingPosition[0], StartingPosition[1]
         
         Step = 1 # step taken by traveler, set to one to account for predefined routes below
-        NorthTotalSpeed, EastTotalSpeed, SouthTotalSpeed, WestTotalSpeed = 0, 0, 0, 0 # Evaluating Criterion (value to be maximized)
+        NorthTotalFavorability, EastTotalFavorability, SouthTotalFavorability, WestTotalFavorability = 0, 0, 0, 0 # Evaluating Criterion (value to be maximized)
         
         ''' note we could do the below code in a single function honestly '''
         
         # Planning Northward Route (up starting move) #
-        NorthTotalSpeed += self.SpeedStep(StartingPosition, [x0, (y0 - 1)], LandScape) # accounts for initial predefined move
+        NorthTotalFavorability += self.Favorability(self.C, StartingPosition, [x0, (y0 - 1)]) # accounts for initial predefined move
         PlanPosition = [x0, (y0 - 1)] # represents the first step (Step = 1)
         while Step <= WeighingSteps:
-            PlanSpeed, PlanPosition = self.PlanStep(self, PlanPosition, LandScape)
+            PlanFavor, PlanPosition = self.PlanStep(self, PlanPosition)
             Step += 1
-            NorthTotalSpeed += PlanSpeed
+            NorthTotalFavorability += PlanFavor
         ###
         Step = 1
         
         # Planning Eastward Route (right starting move) #
-        EastTotalSpeed += self.SpeedStep(StartingPosition, [(x0 + 1), y0], LandScape) # accounts for initial predefined move
+        EastTotalFavorability += self.Favorability(self.C, StartingPosition, [(x0 + 1), y0]) # accounts for initial predefined move
         PlanPosition = [(x0 + 1), y0] # represents the first step (Step = 1)
         while Step <= WeighingSteps:
-            PlanSpeed, PlanPosition = self.PlanStep(self, PlanPosition, LandScape)
+            PlanFavor, PlanPosition = self.PlanStep(self, PlanPosition)
             Step += 1
-            EastTotalSpeed += PlanSpeed
+            EastTotalFavorability += PlanFavor
         ###
         Step = 1
         
         # Planning Southward Route (down starting move) #
-        SouthTotalSpeed += self.SpeedStep(StartingPosition, [x0, (y0 + 1)], LandScape) # accounts for initial predefined move
+        SouthTotalFavorability += self.Favorability(self.C, StartingPosition, [x0, (y0 + 1)]) # accounts for initial predefined move
         PlanPosition = [x0, (y0 + 1)] # represents the first step (Step = 1)
         while Step <= WeighingSteps:
-            PlanSpeed, PlanPosition = self.PlanStep(self, PlanPosition, LandScape)
+            PlanFavor, PlanPosition = self.PlanStep(self, PlanPosition)
             Step += 1
-            SouthTotalSpeed += PlanSpeed
+            SouthTotalFavorability += PlanFavor
         ###
         Step = 1
         
         # Planning Westward Route (left starting move) #
-        WestTotalSpeed += self.SpeedStep(StartingPosition, [(x0 - 1), y0], LandScape) # accounts for initial predefined move
+        WestTotalFavorability += self.Favorability(self.C, StartingPosition, [(x0 - 1), y0]) # accounts for initial predefined move
         PlanPosition = [(x0 - 1), y0] # represents the first step (Step = 1)
         while Step <= WeighingSteps:
-            PlanSpeed, PlanPosition = self.PlanStep(self, PlanPosition, LandScape)
+            PlanFavor, PlanPosition = self.PlanStep(self, PlanPosition)
             Step += 1
-            WestTotalSpeed += PlanSpeed
+            WestTotalFavorability += PlanFavor
         ###
         Step = 1
         
@@ -317,57 +387,18 @@ class Traveler:
         then maybe we propogate out everything by one more step?'''
         # Evaluating Optimal Route #
         UpdatedRoutes = [[x0, (y0 - 1)], [(x0 + 1), y0], [x0, (y0 + 1)], [(x0 - 1), y0]] # [North, East, South, West] first move 
-        PlannedTotalSpeeds = [NorthTotalSpeed, EastTotalSpeed, SouthTotalSpeed, WestTotalSpeed]
+        PlannedTotalFavorabilities = [NorthTotalFavorability, EastTotalFavorability, SouthTotalFavorability, WestTotalFavorability]
         
-        OptimalSpeed = max(PlannedTotalSpeeds)
+        MostFavorable = max(PlannedTotalFavorabilities)
         
-        OptimalRoute = UpdatedRoutes[PlannedTotalSpeeds.index(OptimalSpeed)]
+        OptimalRoute = UpdatedRoutes[PlannedTotalFavorabilities.index(MostFavorable)]
         
-        return OptimalSpeed, OptimalRoute
+        return MostFavorable, OptimalRoute
         
     ### END PlanRoute
     
     
-    def SpeedStep(self, StartingPosition, EndingPosition, LandScape):
-        '''
-        Description: essentially this function will do the delta Z calculation, time that 
-        by the gradient and determine the speed of that step
-        
-        This speed step function is good too becuase we can eventually factor in mass and other things too!
-        which would pull on the self parameter
-        
-        Inputs:
-            - StartingPosition: list of intergers, representing the indeces of the starting position in x and y (ex: [column index (x), row index(y)])
-            - EndingPosition: list of intergers, representing the indeces of the ending position in x and y (ex: [column index (x), row index(y)])
-                
-        Returns:
-            - Speed: 
-
-        '''
-        
-        x0, y0 = StartingPosition[0], StartingPosition[1]
-        xf,yf = EndingPosition[0], EndingPosition[1]
-        
-        #ElevationChange = (LandScape.ZPositions[yf][xf] - LandScape.ZPositions[y0][x0]) # must switch order of indexing
-        Gradient = LandScape.Slopes[yf][xf]                                             # becuase python indexes row then
-        SpeedMultiplier = LandScape.SpeedMatrix[yf][xf]                                 # column so y then x 
-        
-        
-        Speed = SpeedMultiplier * (np.exp(-1 * Gradient))
-        ''' 
-        Wether the travler moves uphil or downhill, their speed will exponentially decay with the gradient
-        models by an e^-x function. Going uphill is slower and harder, while going down hill is slower becuase 
-        the trvaler will have to control their speed to not slip and fall. The favorability function does weight
-        downward movements more heavily however.
-        '''
-        
-        
-        
-        return Speed
-    ### END SpeedStep
-    
-    
-    def PlanStep(self, Position, LandScape):
+    def PlanStep(self, Position):
         '''
         Description: I want this function to plan what step to take, essentially we would be doing the take step function 
         but updating some sort of planning position essentially determines which of the 4 directions is best
@@ -404,20 +435,21 @@ class Traveler:
         
         '''
         
+        
         # Unpacking Traveler Position Values #
         x, y = Position[0], Position[1]
         
         # Northward Route (up) #
-        NorthPlanSpeed = self.SpeedStep(Position, [x, (y - 1)], LandScape)
+        NorthPlanSpeed = self.Favorability(self.C, Position, [x, (y - 1)])
         
         # Eastward Route (right) #
-        EastPlanSpeed = self.SpeedStep(Position, [(x + 1), y], LandScape)
+        EastPlanSpeed = self.Favorability(self.C, Position, [(x + 1), y])
         
         # Southward Route (down) #
-        SouthPlanSpeed = self.SpeedStep(Position, [x, (y + 1)], LandScape)
+        SouthPlanSpeed = self.Favorability(self.C, Position, [x, (y + 1)])
         
         # Westward Route (left) #
-        WestPlanSpeed = self.SpeedStep(Position, [(x - 1), y], LandScape)
+        WestPlanSpeed = self.Favorability(self.C, Position, [(x - 1), y])
         
         
         ''' note: if two steps are equally viable we need an if condition to check for this 
@@ -427,32 +459,88 @@ class Traveler:
         
         # Evaluating Best Step #
         UpdatedPositions = [[x, (y - 1)], [(x + 1), y], [x, (y + 1)], [(x - 1), y]] # [North, East, South, West] Positions 
-        PlannedSpeeds = [NorthPlanSpeed, EastPlanSpeed, SouthPlanSpeed, WestPlanSpeed]
+        PlannedFavorability = [NorthPlanSpeed, EastPlanSpeed, SouthPlanSpeed, WestPlanSpeed]
         
-        OptimalSpeed = max(PlannedSpeeds)
+        MostFavorable = max(PlannedFavorability)
         
-        OptimalPosition = UpdatedPositions[PlannedSpeeds.index(OptimalSpeed)]
+        OptimalPosition = UpdatedPositions[PlannedFavorability.index(MostFavorable)]
         
-        return OptimalSpeed, OptimalPosition
+        return MostFavorable, OptimalPosition
     ### END PlanStep
     
     
-    def Favorability(self):
+    def Displacement(self, r_i, r_f):
+        '''
+        Description: Determines the displacement between the r_i and r_f position for the favorability function
+            
+        Inputs:
+            - r_i: list of intergers ([x_i, y_i]), current position in the form of matrix indeces
+            - r_f: list of intergers ([x_f, y_f]), position of desired node (or destination) in the form of matrix indeces
+            
+        Returns:
+            - Displacement: float, value determining the net displacemet between the initial and final positions
         '''
         
-        '''
+        # X-Direction Displacement #
+        Delta_X = r_f[0] - r_i[0]
         
-        # F = speed * C * (ri - rf)^2        
+        # Y-Direction Displacement #
+        Delta_Y = r_f[1] - r_i[1]
         
-        # make usre to weigh downward elevation changes more heavily, you favor downhill climbs more than
-        # uphill ones, maybe just an ifcheck if elevation change = negative then 1.1 times F or something like that 
-       
+        # Determing Displacement #
+        Displacement = np.sqrt( (Delta_X ** 2) + (Delta_Y ** 2) )
+        
+        return Displacement
+    ### END Displacement
+        
     
-
+    def Favorability(self, C, StartingPosition, EndingPosition):
+        '''
+        Description:
+            
+        Inputs:
+            - C:
+            - Speed:
+            - StartingPosition: list of intergers, representing the indeces of the starting position in x and y (ex: [column index (x), row index(y)])
+            - EndingPosition: list of intergers, representing the indeces of the ending position in x and y (ex: [column index (x), row index(y)])
+            - Nodes:
+            - Landscape:
+                
+        Returns:
+            F:
+        
+                
+        
+        NOTES:
+            - if need be later on we can define a speed variable: Speed = MASSTERM * OTHERPHYSICSTERMS * self.LandScape.SpeedMatrix[Xf][Yf]
+        '''
+        
+        # Unpacking Traveler Position Values #
+        Xi, Yi = StartingPosition[0], StartingPosition[1]
+        Xf, Yf = EndingPosition[0], EndingPosition[1]
+        
+        # Nodes would be a dictionary {weight1: [x_f1, y_f1], weight2: [x_f2, y_f2], etc...}
+        
+        # Node Weighting #
+        NodeWeightingTerm = 0
+        for weight, node in self.Nodes.items(): # determines the effect of multiple nodes and their weights
+            NodeWeightingTerm += weight * self.Displacement(EndingPosition, node)
+        
+        
+        # Elevation Dependent Favorability #
+        ElevationChange = (self.LandScape.ZPositions[Yf][Xf] - self.LandScape.ZPositions[Yi][Xi])
+        
+        if ElevationChange > 0: # DeltaZ = + (uphill)
+            F = C * self.LandScape.SpeedMatrix[Xf][Yf] * NodeWeightingTerm
+        else: # DeltaZ = - (downhill)
+            F = 1.1 * C * self.LandScape.SpeedMatrix[Xf][Yf] * NodeWeightingTerm
+            
+        
+        return F
     ### END Favorability
     
     
-    def TakeStep(self, LandScape, WeighingSteps):
+    def TakeStep(self, WeighingSteps):
         ''' 
         Description: weighs the routes outputted by plan route and chooses the best one and takes a step
         updating its position and storing the movement in the file to keep trakc of what happened, perhaps I should 
@@ -466,7 +554,7 @@ class Traveler:
         
         ### this is only a step taken based upon the speed, but it needs to be a step taken based upon favorability
         ### so we need to factor in the nodes or destination values
-        OptimalSpeed, self.Position = self.PlanRoute(self, self.Position, LandScape, WeighingSteps)
+        MostFavorable, self.Position = self.PlanRoute(self.Position, WeighingSteps)
         
         
         ### then we need to store the step taken, and the speed taken
@@ -493,30 +581,18 @@ root.destroy()
 
 os.chdir(FilePath) # navigates to directory file is stored within
 
-Pittsburgh = Landscape(FileName)
+
+
+
+
+Pittsburgh = Landscape(FileName, 'Pittsburgh')
 
 
 
 
 Pittsburgh.GradientContourDiagram()
 
-
-
-
-'''  '''
-### this is good for testing, keep this lil nuggest of code, for seeing how passable the terrain is... 
-Pittsburgh.SpeedFunction(np.ones((Pittsburgh.DataHeight, Pittsburgh.DataWidth)), 45)
-
-cmap = mcolors.ListedColormap(['red', 'yellow', 'green'])
-boundaries = [0,0.0099,0.0101, 1]
-norm = mcolors.BoundaryNorm(boundaries, cmap.N)
-
-plt.imshow(Pittsburgh.SpeedMatrix, cmap = cmap, norm = norm)
-
-plt.colorbar(label='passability') 
-''' '''
-
-
+Pittsburgh.VisualizingSpeedFunction()
 
 
 
