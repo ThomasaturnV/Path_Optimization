@@ -276,8 +276,6 @@ class LandScape:
         # Saving Figure #
         plt.savefig(f'LandscapeSpeedFunction_{self.Location}_Bin{self.BinFactor}-{self.BinMode}.png')
     ### END VisualizingSpeedFunction
-        
-    
 ### END Landscape
 
 
@@ -548,7 +546,7 @@ class Traveler:
     ### END Favorability
     
     
-    def MovementFile(self, Position, Favorability, Mode):
+    def MovementFile(self, StartPosition, EndPosition, Favorability, Mode):
         '''
         Description: Bare bones for now just storing end position and favorability, later on I want it to store the following:
             start position [x_i,y_i] | end position [x_i+1, y_i+1] | movement direction: north south etc | favorability of movement | speed of movement | time taken to move
@@ -561,14 +559,25 @@ class Traveler:
 
         '''
         
+        
+        '''
+        Useful code from another project:
+            
+        np.savetxt(OutputName, AngMom, fmt = "%15.3f"*4, comments = '#', 
+                   header = "{:15s}{:15s}{:15s}{:15s}".format('t', 'L_tot_x', 'L_tot_y', 'L_tot_z'))
+        '''
+        
+        #Speed = self.LandScape.SpeedMatrix[EndPosition[0]][EndPosition[1]] # note I just realized we may need to check this [yf,xf]???
+        ### using the end position relative to the start position we cna find the movement direction, we can use the speed, self.maxspeed, and the position difference to find the time taken to move
+        
         if Mode == 'Initialize':
             FileI = open('TravelFile.txt', 'w')
-            FileI.write('# End Position | Favorability # \n')
+            FileI.write('# Start Position | End Position | Favorability # \n')
             FileI.close()
             
         if Mode == 'Update':
             FileU = open('TravelFile.txt', 'a')
-            FileU.write(f'{Position} | {Favorability} \n')
+            FileU.write(f'{StartPosition} | {EndPosition} | {Favorability} \n')
             FileU.close()
         
         
@@ -588,10 +597,12 @@ class Traveler:
             -
         '''
         
+        # Storing The position Before Step #
+        StartPosition = self.Position # Before Plan Route is activated and used
+        
         MostFavorable, self.Position = self.PlanRoute(self.Position, WeighingSteps)
         
-        self.MovementFile(self.Position, MostFavorable, 'Update')
-        
+        self.MovementFile(StartPosition, self.Position, MostFavorable, 'Update')
     ### END TakeStep
     
     def Travel(self, WeighingSteps, Destination):
@@ -617,7 +628,7 @@ class Traveler:
     
         i = 0 # temporary variable used in testing to see if things get stuck...
         
-        self.MovementFile(0, 0, 'Initialize')
+        self.MovementFile(0, 0, 0, 'Initialize')
         
         # Traveling Loop #
         while (self.Position != self.Destination) and (i <= 100):
@@ -638,6 +649,15 @@ class Traveler:
 ### END Traveler
     
 
+### SOME NOTES:
+'''
+1) We need to graph what is happening to truly see if its doing it right (maybe a data analysis class)
+2) enhance the txt output
+3) check the indexing on each instance of using the landscape matrcies [x][y] or [y][x], python indexes by row, column
+    ---> this makes me thing that we have to index from [y][x]
+
+
+'''    
 
 
 
