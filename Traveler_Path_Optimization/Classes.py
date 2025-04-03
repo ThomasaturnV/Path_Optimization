@@ -43,7 +43,7 @@ from pyproj import Transformer
 
 
 ### ----- # Classes # ----- ###
-class Landscape:
+class LandScape:
     ''' 
     Description: Classs to represent the landscape the traveler will be interacting with. This class has the 
     following functionality:
@@ -296,9 +296,10 @@ class Traveler:
         maybe we can take either the indeces or the actual meter position
             
         Inputs:
-            - StartingPosition:
-            - Nodes:
-            - LandScape:
+            - StartingPosition: list of floats/intergers, Starting Position of the traveler in meters or position indeces [x_0, y_0]. 
+            - Nodes: dictionary, containing node positions and their weights for points of interest. Format looks like:
+            Nodes = {weight1: [x_1, y_1], weight2: [x_2, y_2], etc...}, where the positions are the indeces. 
+            - LandScape: 
         '''
         
         ### Temporary Variables ###
@@ -306,11 +307,17 @@ class Traveler:
         
         # ----- #
         
-        self.Position = StartingPosition
-        
+        # Initializing Self Parameters #
         self.Nodes = Nodes
         
         self.LandScape = LandScape
+        
+        # Position adjustment (if given in meters) #
+        if StartingPosition < [self.LandScape.DataHeight, self.LandScape.DataWidth]: # Given as position indeces
+            self.Position = StartingPosition 
+            # NOTE: This could be inaccurate if a location is selected near the gloabl origin... 
+        else: # Given as meter location
+            self.Position = [ self.LandScape.XPositions.index(StartingPosition[0]) , self.LandScape.YPositions.index(StartingPosition[1]) ]
     ### END __init__
     
     
@@ -346,7 +353,7 @@ class Traveler:
         NorthTotalFavorability += self.Favorability(self.C, StartingPosition, [x0, (y0 - 1)]) # accounts for initial predefined move
         PlanPosition = [x0, (y0 - 1)] # represents the first step (Step = 1)
         while Step <= WeighingSteps:
-            PlanFavor, PlanPosition = self.PlanStep(self, PlanPosition)
+            PlanFavor, PlanPosition = self.PlanStep(PlanPosition)
             Step += 1
             NorthTotalFavorability += PlanFavor
         ###
@@ -356,7 +363,7 @@ class Traveler:
         EastTotalFavorability += self.Favorability(self.C, StartingPosition, [(x0 + 1), y0]) # accounts for initial predefined move
         PlanPosition = [(x0 + 1), y0] # represents the first step (Step = 1)
         while Step <= WeighingSteps:
-            PlanFavor, PlanPosition = self.PlanStep(self, PlanPosition)
+            PlanFavor, PlanPosition = self.PlanStep(PlanPosition)
             Step += 1
             EastTotalFavorability += PlanFavor
         ###
@@ -366,7 +373,7 @@ class Traveler:
         SouthTotalFavorability += self.Favorability(self.C, StartingPosition, [x0, (y0 + 1)]) # accounts for initial predefined move
         PlanPosition = [x0, (y0 + 1)] # represents the first step (Step = 1)
         while Step <= WeighingSteps:
-            PlanFavor, PlanPosition = self.PlanStep(self, PlanPosition)
+            PlanFavor, PlanPosition = self.PlanStep(PlanPosition)
             Step += 1
             SouthTotalFavorability += PlanFavor
         ###
@@ -376,7 +383,7 @@ class Traveler:
         WestTotalFavorability += self.Favorability(self.C, StartingPosition, [(x0 - 1), y0]) # accounts for initial predefined move
         PlanPosition = [(x0 - 1), y0] # represents the first step (Step = 1)
         while Step <= WeighingSteps:
-            PlanFavor, PlanPosition = self.PlanStep(self, PlanPosition)
+            PlanFavor, PlanPosition = self.PlanStep(PlanPosition)
             Step += 1
             WestTotalFavorability += PlanFavor
         ###
@@ -394,7 +401,6 @@ class Traveler:
         OptimalRoute = UpdatedRoutes[PlannedTotalFavorabilities.index(MostFavorable)]
         
         return MostFavorable, OptimalRoute
-        
     ### END PlanRoute
     
     
@@ -481,6 +487,9 @@ class Traveler:
             - Displacement: float, value determining the net displacemet between the initial and final positions
         '''
         
+        # Small factor for numerical stability (when r_i = r_f) #
+        Epsilon = 1e-2
+        
         # X-Direction Displacement #
         Delta_X = r_f[0] - r_i[0]
         
@@ -488,7 +497,7 @@ class Traveler:
         Delta_Y = r_f[1] - r_i[1]
         
         # Determing Displacement #
-        Displacement = np.sqrt( (Delta_X ** 2) + (Delta_Y ** 2) )
+        Displacement = np.sqrt( (Delta_X ** 2) + (Delta_Y ** 2) ) + Epsilon
         
         return Displacement
     ### END Displacement
@@ -503,7 +512,8 @@ class Traveler:
             - Speed:
             - StartingPosition: list of intergers, representing the indeces of the starting position in x and y (ex: [column index (x), row index(y)])
             - EndingPosition: list of intergers, representing the indeces of the ending position in x and y (ex: [column index (x), row index(y)])
-            - Nodes:
+            - Nodes: dictionary, containing node positions and their weights for points of interest. Format looks like:
+            Nodes = {weight1: [x_1, y_1], weight2: [x_2, y_2], etc...}, where the positions are the indeces. 
             - Landscape:
                 
         Returns:
@@ -519,12 +529,10 @@ class Traveler:
         Xi, Yi = StartingPosition[0], StartingPosition[1]
         Xf, Yf = EndingPosition[0], EndingPosition[1]
         
-        # Nodes would be a dictionary {weight1: [x_f1, y_f1], weight2: [x_f2, y_f2], etc...}
-        
         # Node Weighting #
         NodeWeightingTerm = 0
         for weight, node in self.Nodes.items(): # determines the effect of multiple nodes and their weights
-            NodeWeightingTerm += weight * self.Displacement(EndingPosition, node)
+            NodeWeightingTerm += weight * (self.Displacement(EndingPosition, node) ** -2)
         
         
         # Elevation Dependent Favorability #
@@ -540,6 +548,34 @@ class Traveler:
     ### END Favorability
     
     
+    def MovementFile(self, Position, Favorability, Mode):
+        '''
+        Description: Bare bones for now just storing end position and favorability, later on I want it to store the following:
+            start position [x_i,y_i] | end position [x_i+1, y_i+1] | movement direction: north south etc | favorability of movement | speed of movement | time taken to move
+
+        Inputs:
+            - Position:
+            - Favorability:
+            - Mode: 
+        
+
+        '''
+        
+        if Mode == 'Initialize':
+            FileI = open('TravelFile.txt', 'w')
+            FileI.write('# End Position | Favorability # \n')
+            FileI.close()
+            
+        if Mode == 'Update':
+            FileU = open('TravelFile.txt', 'a')
+            FileU.write(f'{Position} | {Favorability} \n')
+            FileU.close()
+        
+        
+        
+    ### END MovementFile
+    
+    
     def TakeStep(self, WeighingSteps):
         ''' 
         Description: weighs the routes outputted by plan route and chooses the best one and takes a step
@@ -552,63 +588,60 @@ class Traveler:
             -
         '''
         
-        ### this is only a step taken based upon the speed, but it needs to be a step taken based upon favorability
-        ### so we need to factor in the nodes or destination values
         MostFavorable, self.Position = self.PlanRoute(self.Position, WeighingSteps)
         
-        
-        ### then we need to store the step taken, and the speed taken
+        self.MovementFile(self.Position, MostFavorable, 'Update')
         
     ### END TakeStep
     
+    def Travel(self, WeighingSteps, Destination):
+        '''
+        Description: we are gonna use this guy as the method that actually initiates all of the steps and moves the traveler
+            
+        Inputs:
+            - WeighingSteps:
+            - Destination: list of floats/intergers, Final (ending) Position of the traveler in meters or position indeces [x_f, y_f]. 
+        '''
     
+        # Position adjustment (if given in meters) #
+        if Destination < [self.LandScape.DataHeight, self.LandScape.DataWidth]: # Given as position indeces
+            self.Destination = Destination 
+        # NOTE: This could be inaccurate if a location is selected near the gloabl origin... 
+        else: # Given as meter location
+            self.Destination = [ self.LandScape.XPositions.index(Destination[0]) , self.LandScape.YPositions.index(Destination[1]) ]
+    
+    
+    
+    
+    
+    
+        i = 0 # temporary variable used in testing to see if things get stuck...
+        
+        self.MovementFile(0, 0, 'Initialize')
+        
+        # Traveling Loop #
+        while (self.Position != self.Destination) and (i <= 100):
+            self.TakeStep(WeighingSteps)
+            
+            
+            i += 1
+        ###
+        
+        if self.Position == self.Destination:
+            print('Destination Reached!')
+        else:
+            print('i reached max value | Too many Iterations')
+    
+    
+    ### END Travel
     
 ### END Traveler
     
-        
-    
-    
-    
-    
-# ### TESTING ###
-### File Selection ###
-print('SelectData')
-root = Tk()
-Path = askopenfilename(title = "Select file", filetypes = (("txt files","*.txt"),("all files","*.*")))
-FilePath = os.path.split(os.path.abspath(Path))[0] # saves file path as a string
-FileName = os.path.split(os.path.abspath(Path))[1] # saves file name as a string
-root.destroy()
-
-os.chdir(FilePath) # navigates to directory file is stored within
 
 
 
 
 
-Pittsburgh = Landscape(FileName, 'Pittsburgh')
-
-
-
-
-Pittsburgh.GradientContourDiagram()
-
-Pittsburgh.VisualizingSpeedFunction()
-
-
-
-
-# print(Pittsburgh.DataHeight)
-# print(Pittsburgh.DataWidth)
-
-
-
-
-'''
-I want a select input function with the tkinter code in it, maybe a mode, folder or file
-
-then import my classes and run landscape
-
-'''
 
         
     
