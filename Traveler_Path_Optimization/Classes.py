@@ -2,7 +2,7 @@
 '''
 Author: Thomas Joyce
 
-Version: 0.21
+Version: 0.23
 
 Class: MATH 496T - Mathematics of Generative AI 
 
