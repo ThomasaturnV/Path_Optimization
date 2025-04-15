@@ -315,7 +315,7 @@ class Traveler:
             self.Position = StartingPosition 
             # NOTE: This could be inaccurate if a location is selected near the gloabl origin... 
         else: # Given as meter location
-            self.Position = [ self.LandScape.XPositions.index(StartingPosition[0]) , self.LandScape.YPositions.index(StartingPosition[1]) ]
+            self.Position = [ int(np.where(self.LandScape.XPositions == StartingPosition[0])[0]), int(np.where(self.LandScape.XPositions == StartingPosition[0])[1])]
     ### END __init__
     
     
@@ -350,6 +350,7 @@ class Traveler:
         # Planning Northward Route (up starting move) #
         NorthTotalFavorability += self.Favorability(self.C, StartingPosition, [x0, (y0 - 1)]) # accounts for initial predefined move
         PlanPosition = [x0, (y0 - 1)] # represents the first step (Step = 1)
+        
         while Step <= WeighingSteps:
             PlanFavor, PlanPosition = self.PlanStep(PlanPosition)
             Step += 1
@@ -444,26 +445,25 @@ class Traveler:
         x, y = Position[0], Position[1]
         
         # Northward Route (up) #
-        NorthPlanSpeed = self.Favorability(self.C, Position, [x, (y - 1)])
+        NorthPlanFavor = self.Favorability(self.C, Position, [x, (y - 1)])
         
         # Eastward Route (right) #
-        EastPlanSpeed = self.Favorability(self.C, Position, [(x + 1), y])
+        EastPlanFavor = self.Favorability(self.C, Position, [(x + 1), y])
         
         # Southward Route (down) #
-        SouthPlanSpeed = self.Favorability(self.C, Position, [x, (y + 1)])
+        SouthPlanFavor = self.Favorability(self.C, Position, [x, (y + 1)])
         
         # Westward Route (left) #
-        WestPlanSpeed = self.Favorability(self.C, Position, [(x - 1), y])
+        WestPlanFavor = self.Favorability(self.C, Position, [(x - 1), y])
         
         
         ''' note: if two steps are equally viable we need an if condition to check for this 
         if this does happen tho, lets just utilize the self and find the step that is closest to the destination '''
         
-        ''' We need to convert this into favorability stuff '''
         
         # Evaluating Best Step #
         UpdatedPositions = [[x, (y - 1)], [(x + 1), y], [x, (y + 1)], [(x - 1), y]] # [North, East, South, West] Positions 
-        PlannedFavorability = [NorthPlanSpeed, EastPlanSpeed, SouthPlanSpeed, WestPlanSpeed]
+        PlannedFavorability = [NorthPlanFavor, EastPlanFavor, SouthPlanFavor, WestPlanFavor]
         
         MostFavorable = max(PlannedFavorability)
         
@@ -496,6 +496,8 @@ class Traveler:
         
         # Determing Displacement #
         Displacement = np.sqrt( (Delta_X ** 2) + (Delta_Y ** 2) ) + Epsilon
+        
+        #Displacement = Epsilon + abs(Delta_X) + abs(Delta_Y)
         
         return Displacement
     ### END Displacement
@@ -537,9 +539,9 @@ class Traveler:
         ElevationChange = (self.LandScape.ZPositions[Yf][Xf] - self.LandScape.ZPositions[Yi][Xi])
         
         if ElevationChange > 0: # DeltaZ = + (uphill)
-            F = C * self.LandScape.SpeedMatrix[Xf][Yf] * NodeWeightingTerm
+            F = C * self.LandScape.SpeedMatrix[Yf][Xf] * NodeWeightingTerm
         else: # DeltaZ = - (downhill)
-            F = 1.1 * C * self.LandScape.SpeedMatrix[Xf][Yf] * NodeWeightingTerm
+            F = 1.1 * C * self.LandScape.SpeedMatrix[Yf][Xf] * NodeWeightingTerm
             
         
         return F
@@ -572,20 +574,18 @@ class Traveler:
         
         if Mode == 'Initialize':
             FileI = open('TravelFile.txt', 'w')
-            FileI.write('# Start Position | End Position | Favorability # \n')
+            FileI.write('# Start Position | End Position | Favorability of Route # \n')
             FileI.close()
             
         if Mode == 'Update':
             FileU = open('TravelFile.txt', 'a')
             FileU.write(f'{StartPosition} | {EndPosition} | {Favorability} \n')
+            print(f'{StartPosition} | {EndPosition} | {Favorability} \n')
             FileU.close()
-        
-        
-        
     ### END MovementFile
     
-    
-    def TakeStep(self, WeighingSteps):
+
+    def TakeStep(self, WeighingSteps=5):
         ''' 
         Description: weighs the routes outputted by plan route and chooses the best one and takes a step
         updating its position and storing the movement in the file to keep trakc of what happened, perhaps I should 
@@ -604,8 +604,63 @@ class Traveler:
         
         self.MovementFile(StartPosition, self.Position, MostFavorable, 'Update')
     ### END TakeStep
+
+
+    def BoundingBox(self, Position, n=5):
+        ''' 
+        Description: this function will take the current position and create a bounding box of size n x n around the position
+        to for tracking if the traveler is stuck. This creates a matrix of size (DataHeight, DataWidth) with zeros everywhere except 
+        for ones in a region n x n around the Position variable. The region of ones is a bounding box, representing a region
+        where the traveler could get stuck within, best size to use if 5.  
+
+        Inputs:
+            - n: interger, size of the bounding box (n x n) to be created around the traveler. Must be odd value
+            - Position: list of intergers, current position of the traveler in position indeces [x_i, y_i]
+        
+        '''
+        TravelerBounds = np.zeros((self.LandScape.DataHeight, self.LandScape.DataWidth))
+
+        [X_c, Y_c] = Position # center values of bounding box
+
+        BoxRadius = n // 2 # radius of the bounding box (half the size of the box accounting for odd number)
+
+        # Box Bounding Indeces (correcting for points near of at the edge of the field)
+        X_LeftEdge = max(0, X_c - BoxRadius) 
+        X_RightEdge = min((self.LandScape.DataWidth - 1), X_c + BoxRadius) 
+
+        Y_TopEdge = max(0, Y_c - BoxRadius) 
+        Y_BottomEdge = min((self.LandScape.DataHeight - 1), Y_c + BoxRadius)
+
+        # Creating Bounding Box (of ones)
+        TravelerBounds[Y_TopEdge:(Y_BottomEdge + 1), X_LeftEdge:(X_RightEdge + 1)] = 1 # reversed becuase (0,0) point is at the top left
+
+        return TravelerBounds
+    ### END BoundingBox
+
     
-    def Travel(self, WeighingSteps, Destination):
+    def UpdateNodes(self, Weight, Position, Mode):
+        '''
+        
+        '''
+        # Adding a Node #
+        if Mode == 'Add':
+            self.Nodes[Weight] = Position
+            return
+        
+        # Deleting a Node #
+        elif Mode == 'Delete-Weight':
+            del self.Nodes[Weight]
+            return
+            
+        elif Mode == 'Delete-Position':
+            for Weight, Position in self.Nodes.items():
+                if Position == Position:
+                    del self.Nodes[Weight]
+                    return
+    ### END UpdateNodes
+
+
+    def Travel(self, Destination, WeighingSteps=5):
         '''
         Description: we are gonna use this guy as the method that actually initiates all of the steps and moves the traveler
             
@@ -615,26 +670,77 @@ class Traveler:
         '''
     
         # Position adjustment (if given in meters) #
-        if Destination < [self.LandScape.DataHeight, self.LandScape.DataWidth]: # Given as position indeces
+        if Destination < [self.LandScape.DataWidth, self.LandScape.DataHeight]: # Given as position indeces
             self.Destination = Destination 
         # NOTE: This could be inaccurate if a location is selected near the gloabl origin... 
         else: # Given as meter location
-            self.Destination = [ self.LandScape.XPositions.index(Destination[0]) , self.LandScape.YPositions.index(Destination[1]) ]
+            self.Destination = [ int(np.where(self.LandScape.XPositions == Destination[0])[0]), int(np.where(self.LandScape.XPositions == Destination[0])[1])]
+    
+
+        # Determining Destination Weight #
+        NodeBounds = np.zeros((self.LandScape.DataHeight, self.LandScape.DataWidth))
+        for Weight, Position in self.Nodes.items():
+            if Position == self.Destination:
+                DestinationWeight = Weight
+            else:
+                NodeBounds += self.BoundingBox(Position)
     
     
     
     
     
-    
-        i = 0 # temporary variable used in testing to see if things get stuck...
+        i = 1 # temporary variable used in testing to see if things get stuck...
+        Multiple = 1 # used for weight multiplication on temporary nodes 
         
         self.MovementFile(0, 0, 0, 'Initialize')
+
+        # Initializing the bounding box (for traveler getting stuck)
+        TravelerBounds = self.BoundingBox(self.Position) # NOTE: we are currently excluding the radius for testing
+        # we will use a vairable MinimaRadius for the "n" in bounding box, for now I will define it:
+        MinimaRadius = 5
         
-        # Traveling Loop #
-        while (self.Position != self.Destination) and (i <= 100):
+        ### Traveling Loop ###
+        while (self.Position != self.Destination) and (i <= 151):
             self.TakeStep(WeighingSteps)
+
+            
+            # Deleting Node (that is not Destination) whenever it is reached (within a 5 x 5 square radius) #
+            if NodeBounds[self.Position[1]][self.Position[0]] >= 1:
+                
+                # Finding Closest Node to current Location (the node that was reached)
+                MinDisplacement = self.Displacement([0,0], [self.LandScape.DataHeight, self.LandScape.DataWidth])
+                for Weight, Position in self.Nodes.items():
+                    Displacement = self.Displacement(self.Position, Position)
+                    if Displacement <= MinDisplacement:
+                        MinDisplacement = Displacement
+                        NodePosition = Position
+                    ###
+                ###
+                
+                # Deleting the accomplished Node #
+                self.UpdateNodes(0, NodePosition, 'Delete-Position')
+            ###
+            
+            # Updating Traveler Bounds #
+            if i % ((MinimaRadius ** 2) // 2) == 0:
+                TravelerBounds = self.BoundingBox(self.Position) # NOTE: we are currently excluding the radius for testing
+            ###
+            
+
+            # If the traveler is stuck within a local minima (bounding box) #
+            if i % (MinimaRadius ** 2) == 0:
+                if TravelerBounds[self.Position[1]][self.Position[0]] == 1:
+                    Multiple += 1
+                    self.UpdateNodes((DestinationWeight * Multiple), [((self.Position[0] + self.Destination[0]) // 2),  ((self.Position[1] + self.Destination[1]) // 2)], 'Add')
+                    ''' Creates a temporary Node halfway between the destination and the current position, to get traveler unstuck'''
+                    NodeBounds += self.BoundingBox(self.Nodes[DestinationWeight * 2]) # I want this to remain 5, so we are using defualt value
+                ###
+                print('Instuting Temporary Node')
+                print(self.Nodes)
+            ###
             
             
+            # Updating Iteration Counter #
             i += 1
         ###
         
@@ -648,6 +754,10 @@ class Traveler:
     
 ### END Traveler
     
+
+    
+
+
 
 ### SOME NOTES:
 '''
