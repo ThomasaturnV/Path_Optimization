@@ -646,16 +646,53 @@ class Traveler:
         if Mode == 'Add':
             self.Nodes[Weight] = Position
             return
+    
         
+        if Mode == 'Add-NoDuplicate': # Halves the position value if you have the same position in the Nodes dictionary
+            n = 2
+            W = []
+            Pos = []
+            for w, pos in self.Nodes.items():
+                W.append(w)
+                Pos.append(pos)
+                
+            AdjustedPosition = Position
+            while AdjustedPosition in Pos:
+                AdjustedPositionX = ((self.Position[0] + Position[0]) // n)
+                AdjustedPositionY = ((self.Position[1] + Position[1]) // n)
+                
+                AdjustedPosition = [AdjustedPositionX, AdjustedPositionY]
+                n += 1
+            
+            self.Nodes[Weight] = AdjustedPosition
+            return
+                
+                
+                
+            # for w, pos in self.Nodes.items():
+            #     if pos == Position:
+            #         PositionX = ((self.Position[0] + Position[0]) // n)
+            #         PositionY = ((self.Position[1] + Position[1]) // n)
+            #         self.Nodes[Weight] = [PositionX, PositionY]
+            #         return
+                
+            #     else:
+            #         [PositionX, PositionY] = Position
+            
+            # self.Nodes[Weight] = [PositionX, PositionY]
+            # return
+                    
+                
         # Deleting a Node #
         elif Mode == 'Delete-Weight':
             del self.Nodes[Weight]
             return
             
+        
         elif Mode == 'Delete-Position':
-            for Weight, Position in self.Nodes.items():
-                if Position == Position:
-                    del self.Nodes[Weight]
+            for w, Pos in self.Nodes.items():
+                if Pos == Position:
+                    del self.Nodes[w]
                     return
     ### END UpdateNodes
 
@@ -700,7 +737,7 @@ class Traveler:
         MinimaRadius = 5
         
         ### Traveling Loop ###
-        while (self.Position != self.Destination) and (i <= 151):
+        while (self.Position != self.Destination) and (i <= 1000):
             self.TakeStep(WeighingSteps)
 
             
@@ -719,6 +756,7 @@ class Traveler:
                 
                 # Deleting the accomplished Node #
                 self.UpdateNodes(0, NodePosition, 'Delete-Position')
+                NodeBounds -= self.BoundingBox(NodePosition)
             ###
             
             # Updating Traveler Bounds #
@@ -731,9 +769,12 @@ class Traveler:
             if i % (MinimaRadius ** 2) == 0:
                 if TravelerBounds[self.Position[1]][self.Position[0]] == 1:
                     Multiple += 1
-                    self.UpdateNodes((DestinationWeight * Multiple), [((self.Position[0] + self.Destination[0]) // 2),  ((self.Position[1] + self.Destination[1]) // 2)], 'Add')
+                    self.UpdateNodes((DestinationWeight * Multiple), [((self.Position[0] + self.Destination[0]) // 2),  ((self.Position[1] + self.Destination[1]) // 2)], 'Add-NoDuplicate')
+                    
+                    print(self.Nodes)
+                    
                     ''' Creates a temporary Node halfway between the destination and the current position, to get traveler unstuck'''
-                    NodeBounds += self.BoundingBox(self.Nodes[DestinationWeight * 2]) # I want this to remain 5, so we are using defualt value
+                    NodeBounds += self.BoundingBox(self.Nodes[DestinationWeight * Multiple]) # I want this to remain 5, so we are using defualt value
                 ###
                 print('Instuting Temporary Node')
                 print(self.Nodes)

@@ -44,7 +44,7 @@ from Classes import Traveler
 #root.destroy()
 
 # for easier repeatability
-Path = 'C:/Users/thoma/OneDrive/GitHub/Path_Optimization/Traveler_Path_Optimization/ExampleData/OptimalControlElevation-Pittsburgh_Bin40-Median.txt'
+Path = 'C:/Users/thoma/OneDrive/GitHub/Path_Optimization/Traveler_Path_Optimization/ExampleData/OptimalControlElevation-Pittsburgh_Bin10-Median.txt'
 FilePath = os.path.split(os.path.abspath(Path))[0] # saves file path as a string
 FileName = os.path.split(os.path.abspath(Path))[1] # saves file name as a string
 
@@ -57,6 +57,8 @@ os.chdir(FilePath) # navigates to directory file is stored within
 
 Pittsburgh = LandScape(FileName, 'Pittsburgh')
 Pittsburgh.SpeedFunction(np.ones((Pittsburgh.DataHeight, Pittsburgh.DataWidth)))
+
+print('Done with Speed!')
 
 
 # Testing position Dependence#
@@ -81,9 +83,27 @@ Pittsburgh.SpeedFunction(np.ones((Pittsburgh.DataHeight, Pittsburgh.DataWidth)))
 #print(Liam.Position)
 
 
-Leroy = Traveler([1,1], {100: [70, 84]}, Pittsburgh)
-Leroy.Travel([70,84], 5)
+Leroy = Traveler([1,1], {100: [150, 130]}, Pittsburgh)
+Leroy.Travel([150,130], 40)
 print(Leroy.Position)
+
+
+
+
+'''
+4/18/25
+Vanishing node works whenever detination isn't too far away however my iterative node forces it to get stuck so
+i need to look into this. I think we need a condition where the same position is selected as a half node, we just
+give it a burst of favorability in the direction of the destination'
+
+
+
+'''
+
+
+
+
+
 
 
 '''

@@ -387,6 +387,7 @@ def OutputFile(X, Y, Z, Slope, X_unitV, Y_unitV, Location, BinFactor, BinMode, O
     
         for index in range(0, len(X)): # Iterating through each point and writing data to file
             File.write((f"{X[index]:.5f}, {Y[index]:.5f}, {Z[index]:.5f}, {Slope[index]:.5f}, {X_unitV[index]:.5f}, {Y_unitV[index]:.5f} \n")) # 5 decimal float values
+            print('Iteration: ' + str(index + 1) + ' / ' + str(len(X)))
         ###
     ###
     
@@ -444,7 +445,7 @@ def MAIN():
     '''
     
     ############### User Inputs ###############
-    BinFactor = 10 # interger, value describing the number of pixels (data points) in each bin
+    BinFactor = 4 # interger, value describing the number of pixels (data points) in each bin
     BinMode = 'Median' # string, variable description which bin mode is used when compressing the data, see DataRetrieve for more details
     Location = 'Pittsburgh' # string, name of location being displayed (nearest city / landmark)
     OutputMode = 'OptimalControl' # string, name of ouput mode being considered for the output file (see OutputFile for more details)
