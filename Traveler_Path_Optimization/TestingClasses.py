@@ -76,17 +76,34 @@ print('Done with Speed!')
 
 
 # liam is gonna use waypoints, to help lead him to the goal
-#Liam = Traveler([1,1], {100: [70, 84], 50: [35,35], 10: [18,18]}, Pittsburgh)
-### OK now we need to remove a waypoint once its reached
-#Liam.Travel([70,84], 10)
+#Liam = Traveler([1,1], {100: [360, 340], 70: [250, 260], 50: [190,150], 30: [120, 115], 10: [54,63], 5: [33,45]}, Pittsburgh, 1)
+#Liam.Travel([360,340], 100)
+#print(Liam.Nodes)
 
 #print(Liam.Position)
 
 
-Leroy = Traveler([1,1], {100: [150, 130]}, Pittsburgh)
+Leroy = Traveler([1,1], {100: [150,130]}, Pittsburgh, 1)
 Leroy.Travel([150,130], 40)
 print(Leroy.Position)
 
+
+#Neel = Traveler([3,3], {100: [240,250]}, Pittsburgh, 1)
+#Neel.Travel([240,250], 40)
+#print(Neel.Position)
+
+
+
+'''
+4/22/25
+Maye we should add some "momentum" not in the physics sense, more in the sense of it the past few steps actually make progress towards the goal
+then the step that maximizes favorability gets a little extra!
+
+--> another note I want to take away the 1.1 boost to downward movement becuase I think its just going back and forth (and
+up and down in elevation)
+    --> I took that away and the updating node part and it didn't do anything. For testing moving forward I will
+    deactivate these parts for simplicity. 
+'''
 
 
 
@@ -95,10 +112,8 @@ print(Leroy.Position)
 Vanishing node works whenever detination isn't too far away however my iterative node forces it to get stuck so
 i need to look into this. I think we need a condition where the same position is selected as a half node, we just
 give it a burst of favorability in the direction of the destination'
-
-
-
 '''
+
 
 
 

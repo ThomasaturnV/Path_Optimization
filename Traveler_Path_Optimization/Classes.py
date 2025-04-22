@@ -288,7 +288,7 @@ class Traveler:
         
     '''
     
-    def __init__(self, StartingPosition, Nodes, LandScape):
+    def __init__(self, StartingPosition, Nodes, LandScape, C):
         ''' 
         Description: we initilaze the initial and final poitions here, takes the xand y positions to begin with
         maybe we can take either the indeces or the actual meter position
@@ -301,9 +301,13 @@ class Traveler:
         '''
         
         ### Temporary Variables ###
-        self.C = 1
+        self.C = np.zeros((LandScape.DataHeight, LandScape.DataWidth))
+        self.C += C
+        self.CValue = C
         
         # ----- #
+        
+        self.RandomPositions = []
         
         # Initializing Self Parameters #
         self.Nodes = Nodes
@@ -348,7 +352,7 @@ class Traveler:
         ''' note we could do the below code in a single function honestly '''
         
         # Planning Northward Route (up starting move) #
-        NorthTotalFavorability += self.Favorability(self.C, StartingPosition, [x0, (y0 - 1)]) # accounts for initial predefined move
+        NorthTotalFavorability += self.Favorability(StartingPosition, [x0, (y0 - 1)]) # accounts for initial predefined move
         PlanPosition = [x0, (y0 - 1)] # represents the first step (Step = 1)
         
         while Step <= WeighingSteps:
@@ -359,7 +363,7 @@ class Traveler:
         Step = 1
         
         # Planning Eastward Route (right starting move) #
-        EastTotalFavorability += self.Favorability(self.C, StartingPosition, [(x0 + 1), y0]) # accounts for initial predefined move
+        EastTotalFavorability += self.Favorability(StartingPosition, [(x0 + 1), y0]) # accounts for initial predefined move
         PlanPosition = [(x0 + 1), y0] # represents the first step (Step = 1)
         while Step <= WeighingSteps:
             PlanFavor, PlanPosition = self.PlanStep(PlanPosition)
@@ -369,7 +373,7 @@ class Traveler:
         Step = 1
         
         # Planning Southward Route (down starting move) #
-        SouthTotalFavorability += self.Favorability(self.C, StartingPosition, [x0, (y0 + 1)]) # accounts for initial predefined move
+        SouthTotalFavorability += self.Favorability(StartingPosition, [x0, (y0 + 1)]) # accounts for initial predefined move
         PlanPosition = [x0, (y0 + 1)] # represents the first step (Step = 1)
         while Step <= WeighingSteps:
             PlanFavor, PlanPosition = self.PlanStep(PlanPosition)
@@ -379,7 +383,7 @@ class Traveler:
         Step = 1
         
         # Planning Westward Route (left starting move) #
-        WestTotalFavorability += self.Favorability(self.C, StartingPosition, [(x0 - 1), y0]) # accounts for initial predefined move
+        WestTotalFavorability += self.Favorability(StartingPosition, [(x0 - 1), y0]) # accounts for initial predefined move
         PlanPosition = [(x0 - 1), y0] # represents the first step (Step = 1)
         while Step <= WeighingSteps:
             PlanFavor, PlanPosition = self.PlanStep(PlanPosition)
@@ -445,16 +449,16 @@ class Traveler:
         x, y = Position[0], Position[1]
         
         # Northward Route (up) #
-        NorthPlanFavor = self.Favorability(self.C, Position, [x, (y - 1)])
+        NorthPlanFavor = self.Favorability(Position, [x, (y - 1)])
         
         # Eastward Route (right) #
-        EastPlanFavor = self.Favorability(self.C, Position, [(x + 1), y])
+        EastPlanFavor = self.Favorability(Position, [(x + 1), y])
         
         # Southward Route (down) #
-        SouthPlanFavor = self.Favorability(self.C, Position, [x, (y + 1)])
+        SouthPlanFavor = self.Favorability(Position, [x, (y + 1)])
         
         # Westward Route (left) #
-        WestPlanFavor = self.Favorability(self.C, Position, [(x - 1), y])
+        WestPlanFavor = self.Favorability(Position, [(x - 1), y])
         
         
         ''' note: if two steps are equally viable we need an if condition to check for this 
@@ -503,7 +507,7 @@ class Traveler:
     ### END Displacement
         
     
-    def Favorability(self, C, StartingPosition, EndingPosition):
+    def Favorability(self, StartingPosition, EndingPosition):
         '''
         Description:
             
@@ -539,9 +543,10 @@ class Traveler:
         ElevationChange = (self.LandScape.ZPositions[Yf][Xf] - self.LandScape.ZPositions[Yi][Xi])
         
         if ElevationChange > 0: # DeltaZ = + (uphill)
-            F = C * self.LandScape.SpeedMatrix[Yf][Xf] * NodeWeightingTerm
+            F = self.C[Yf][Xf] * self.LandScape.SpeedMatrix[Yf][Xf] * NodeWeightingTerm
         else: # DeltaZ = - (downhill)
-            F = 1.1 * C * self.LandScape.SpeedMatrix[Yf][Xf] * NodeWeightingTerm
+            F = 1.1 * self.C[Yf][Xf] * self.LandScape.SpeedMatrix[Yf][Xf] * NodeWeightingTerm
+            #F = self.C[Yf][Xf] * self.LandScape.SpeedMatrix[Yf][Xf] * NodeWeightingTerm
             
         
         return F
@@ -604,6 +609,67 @@ class Traveler:
         
         self.MovementFile(StartPosition, self.Position, MostFavorable, 'Update')
     ### END TakeStep
+    
+    
+    def RandomCBox(self, Position, Mode, n=3):
+        '''
+        Note: we need to implement a way to take away the randomness after you leave the random box,
+        
+        thinking simple if check on position and see if its "n" away from the self.RandomPositions
+        
+        look into how to delete things from a lit and not break a for loop or whatever
+        '''
+        
+        [X_c, Y_c] = Position # center values of random box
+    
+        BoxRadius = n // 2 # radius of the bounding box (half the size of the box accounting for odd number)
+        
+        if Mode == 'Random':
+            self.RandomPositions.append(Position)
+            
+            # Box Bounding Indeces (correcting for points near of at the edge of the field)
+            X_LeftEdge = max(0, X_c - BoxRadius) 
+            X_RightEdge = min((self.LandScape.DataWidth - 1), X_c + BoxRadius) 
+
+            Y_TopEdge = max(0, Y_c - BoxRadius) 
+            Y_BottomEdge = min((self.LandScape.DataHeight - 1), Y_c + BoxRadius)
+            
+            RandomC = np.random.uniform(0.01, (self.CValue - 0.01), (((2 * BoxRadius) + 1), ((2 * BoxRadius) + 1)))
+
+            # Creating Bounding Box (of random values)
+            self.C[Y_TopEdge:(Y_BottomEdge + 1), X_LeftEdge:(X_RightEdge + 1)] = RandomC # reversed becuase (0,0) point is at the top left
+        ###
+            
+        if Mode == 'Normalize':
+            if self.C[Y_c, X_c] == self.CValue: # point at which it leaves the random noise
+                if self.RandomPositions != []:
+                
+                    # Finding Closest Node to current Location (the node that was reached)
+                    MinDisplacement = self.Displacement([0,0], [self.LandScape.DataHeight, self.LandScape.DataWidth])
+                    for Position in self.RandomPositions:
+                        Displacement = self.Displacement(self.Position, Position)
+                        if Displacement <= MinDisplacement:
+                            MinDisplacement = Displacement
+                            NodePosition = Position
+                
+                    # Box Bounding Indeces (correcting for points near of at the edge of the field)
+                    X_LeftEdge = max(0, NodePosition[0] - BoxRadius) 
+                    X_RightEdge = min((self.LandScape.DataWidth - 1), NodePosition[0] + BoxRadius) 
+
+                    Y_TopEdge = max(0, NodePosition[1] - BoxRadius) 
+                    Y_BottomEdge = min((self.LandScape.DataHeight - 1), NodePosition[1] + BoxRadius)
+                
+                        
+                    # Normalizing C noise values (no that traveler has left) #
+                    self.C[Y_TopEdge:(Y_BottomEdge + 1), X_LeftEdge:(X_RightEdge + 1)] = self.CValue # reversed becuase (0,0) point is at the top left
+                    
+                
+                    # Removing Box of Random Points #
+                    self.RandomPositions.remove(NodePosition)
+                ###
+            ###
+        ###
+    ### END RandomCBox
 
 
     def BoundingBox(self, Position, n=5):
@@ -702,8 +768,8 @@ class Traveler:
         Description: we are gonna use this guy as the method that actually initiates all of the steps and moves the traveler
             
         Inputs:
+            - Destination: list of floats/intergers, Final (ending) Position of the traveler in meters or position indeces [x_f, y_f]
             - WeighingSteps:
-            - Destination: list of floats/intergers, Final (ending) Position of the traveler in meters or position indeces [x_f, y_f]. 
         '''
     
         # Position adjustment (if given in meters) #
@@ -737,7 +803,7 @@ class Traveler:
         MinimaRadius = 5
         
         ### Traveling Loop ###
-        while (self.Position != self.Destination) and (i <= 1000):
+        while (self.Position != self.Destination) and (i <= 2500):
             self.TakeStep(WeighingSteps)
 
             
@@ -764,21 +830,67 @@ class Traveler:
                 TravelerBounds = self.BoundingBox(self.Position) # NOTE: we are currently excluding the radius for testing
             ###
             
-
+            
             # If the traveler is stuck within a local minima (bounding box) #
             if i % (MinimaRadius ** 2) == 0:
                 if TravelerBounds[self.Position[1]][self.Position[0]] == 1:
-                    Multiple += 1
-                    self.UpdateNodes((DestinationWeight * Multiple), [((self.Position[0] + self.Destination[0]) // 2),  ((self.Position[1] + self.Destination[1]) // 2)], 'Add-NoDuplicate')
                     
-                    print(self.Nodes)
-                    
-                    ''' Creates a temporary Node halfway between the destination and the current position, to get traveler unstuck'''
-                    NodeBounds += self.BoundingBox(self.Nodes[DestinationWeight * Multiple]) # I want this to remain 5, so we are using defualt value
+                    self.RandomCBox(self.Position, 'Random')
+                    print('Injecting Random Noise')
+                    print(self.C[self.Position[1]][self.Position[0]])
                 ###
-                print('Instuting Temporary Node')
-                print(self.Nodes)
+            else:
+                self.RandomCBox(self.Position, 'Normalize')
             ###
+                    
+            ''' What I want here is t create a box of radius 5, with some favorability multipliers
+                    centered around the current position, where the weights increase in the direction of the nearest node
+                    these weights would instantly disappear once the traveler leaves the box 
+                    
+                    --> easiest way to do this would maybe be to multiple the speed matrix by this stuff
+                    but I don't really want to mess with the physical meaning of the speed matrix
+                    
+                    ----> maybe the C value (the constant for numerical stability can be augmented into a matrix where whatever the user defines
+                    (lets say C = 3) then its just a matrix of a bunch of 3s. However whenever this condition is reached it will change the c values around
+                    the traveler temporarily. So whenever the traveler reaches the point where C = 3 again, it will renormalize that box to a bunch of 
+                    3s again. 
+                    
+                    Let's say we have the node directly to the right:
+                        
+                        [...3 [ 0.5, 1.0, 1.5, 2.0, 2.5 ]   3...
+                         ...3 [ 0.5, 1.0, 1.5, 2.0, 2.5 ]   3...
+                         ...3 [ 0.5, 1.0, 1.5, 2.0, 2.5 ]   3...
+                         ...3 [ 0.5, 1.0, 1.5, 2.0, 2.5 ]   3...
+                         ...3 [ 0.5, 1.0, 1.5, 2.0, 2.5 ]   3...]
+                    '''
+                    
+                    
+                    #Multiple += 1
+                    #self.UpdateNodes((DestinationWeight * Multiple), [((self.Position[0] + self.Destination[0]) // 2),  ((self.Position[1] + self.Destination[1]) // 2)], 'Add')
+                    #self.UpdateNodes((DestinationWeight * Multiple), [((self.Position[0] + self.Destination[0]) // 2),  ((self.Position[1] + self.Destination[1]) // 2)], 'Add-NoDuplicate')
+                    
+                    #''' Creates a temporary Node halfway between the destination and the current position, to get traveler unstuck'''
+                    #NodeBounds += self.BoundingBox(self.Nodes[DestinationWeight * Multiple]) # I want this to remain 5, so we are using defualt value
+                ###
+                #print('Instuting Temporary Node')
+                #print(self.Nodes)
+            
+            
+            ''' Temporarily Disabled ---
+            # If the traveler is stuck within a local minima (bounding box) #
+            # if i % (MinimaRadius ** 2) == 0:
+            #     if TravelerBounds[self.Position[1]][self.Position[0]] == 1:
+            #         Multiple += 1
+            #         self.UpdateNodes((DestinationWeight * Multiple), [((self.Position[0] + self.Destination[0]) // 2),  ((self.Position[1] + self.Destination[1]) // 2)], 'Add')
+            #         #self.UpdateNodes((DestinationWeight * Multiple), [((self.Position[0] + self.Destination[0]) // 2),  ((self.Position[1] + self.Destination[1]) // 2)], 'Add-NoDuplicate')
+                    
+            #         # Creates a temporary Node halfway between the destination and the current position, to get traveler unstuck #
+            #         NodeBounds += self.BoundingBox(self.Nodes[DestinationWeight * Multiple]) # I want this to remain 5, so we are using defualt value
+            #     ###
+            #     print('Instuting Temporary Node')
+            #     print(self.Nodes)
+            ###
+            '''
             
             
             # Updating Iteration Counter #
@@ -796,19 +908,7 @@ class Traveler:
 ### END Traveler
     
 
-    
-
-
-
-### SOME NOTES:
-'''
-1) We need to graph what is happening to truly see if its doing it right (maybe a data analysis class)
-2) enhance the txt output
-3) check the indexing on each instance of using the landscape matrcies [x][y] or [y][x], python indexes by row, column
-    ---> this makes me thing that we have to index from [y][x]
-
-
-'''    
+      
 
 
 
