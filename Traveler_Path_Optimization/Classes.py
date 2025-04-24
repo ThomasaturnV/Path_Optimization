@@ -536,7 +536,7 @@ class Traveler:
         # Node Weighting #
         NodeWeightingTerm = 0
         for weight, node in self.Nodes.items(): # determines the effect of multiple nodes and their weights
-            NodeWeightingTerm += weight * (self.Displacement(EndingPosition, node) ** -2)
+            NodeWeightingTerm += weight * (self.Displacement(EndingPosition, node) ** -3)
         
         
         # Elevation Dependent Favorability #
@@ -602,6 +602,8 @@ class Traveler:
             -
         '''
         
+        
+        '''NOTE: I can return the start position and store it, then maybe when plan route is called it doesn't consider this position?'''
         # Storing The position Before Step #
         StartPosition = self.Position # Before Plan Route is activated and used
         
@@ -634,7 +636,12 @@ class Traveler:
             Y_TopEdge = max(0, Y_c - BoxRadius) 
             Y_BottomEdge = min((self.LandScape.DataHeight - 1), Y_c + BoxRadius)
             
-            RandomC = np.random.uniform(0.01, (self.CValue - 0.01), (((2 * BoxRadius) + 1), ((2 * BoxRadius) + 1)))
+            # Calculate the actual dimensions of the bounding box
+            BoxHeight = Y_BottomEdge - Y_TopEdge + 1
+            BoxWidth = X_RightEdge - X_LeftEdge + 1
+
+            # Generate random values with the correct shape
+            RandomC = np.random.uniform(0.01, (self.CValue - (self.CValue/n)), (BoxHeight, BoxWidth))
 
             # Creating Bounding Box (of random values)
             self.C[Y_TopEdge:(Y_BottomEdge + 1), X_LeftEdge:(X_RightEdge + 1)] = RandomC # reversed becuase (0,0) point is at the top left
@@ -763,7 +770,7 @@ class Traveler:
     ### END UpdateNodes
 
 
-    def Travel(self, Destination, WeighingSteps=5):
+    def Travel(self, Destination, Iterations = 5000, WeighingSteps=5):
         '''
         Description: we are gonna use this guy as the method that actually initiates all of the steps and moves the traveler
             
@@ -803,7 +810,7 @@ class Traveler:
         MinimaRadius = 5
         
         ### Traveling Loop ###
-        while (self.Position != self.Destination) and (i <= 2500):
+        while (self.Position != self.Destination) and (i <= (Iterations + 1)):
             self.TakeStep(WeighingSteps)
 
             

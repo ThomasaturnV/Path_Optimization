@@ -83,20 +83,41 @@ print('Done with Speed!')
 #print(Liam.Position)
 
 
-Leroy = Traveler([1,1], {100: [150,130]}, Pittsburgh, 1)
-Leroy.Travel([150,130], 40)
+# Leroy = Traveler([3,3], {100: [500,300], 50:[150,130], 30:[250, 250], 20: [400, 280]}, Pittsburgh, 1)
+# Leroy.Travel([500,300], 3500, 15)
+# print(Leroy.Position)
+# ### NOTE: This works, but my X and Y values are messed up.
+
+Leroy = Traveler([3,3], {100: [300,500], 50:[130,150], 30:[250, 250], 20: [280, 380]}, Pittsburgh, 1)
+Leroy.Travel([300,500], 3500, 25)
 print(Leroy.Position)
+### NOTE: This works, but my X and Y values are messed up.
 
 
-#Neel = Traveler([3,3], {100: [240,250]}, Pittsburgh, 1)
-#Neel.Travel([240,250], 40)
-#print(Neel.Position)
+
+#Luke = Traveler([3,3], {100: [240,250]}, Pittsburgh, 1)
+#Luke.Travel([240,250], 40)
+#print(Luke.Position)
+
+'''
+4/24/25
+For the box of monotomically increasing C values I can use the tan(theta) = y/x for destination to get a rough direction and if it falls within certain
+angle bins then we can adjust the directions appropriately
+
+One thing I could do is just force it to not move back to its pervius position on the next iteration. It would essentially nullify that
+back and forth I'm seeing. It can still get stuck in a local minima I just think it could be a little less
+often
+
+
+NOTE: I think my X and Y coordinates are messed up (I think its only for the Nodes/destination, but it could
+be everywhere just completely messing everything up and cuasing it to not converge)
+'''
 
 
 
 '''
 4/22/25
-Maye we should add some "momentum" not in the physics sense, more in the sense of it the past few steps actually make progress towards the goal
+Maybe we should add some "momentum" not in the physics sense, more in the sense of it the past few steps actually make progress towards the goal
 then the step that maximizes favorability gets a little extra!
 
 --> another note I want to take away the 1.1 boost to downward movement becuase I think its just going back and forth (and
